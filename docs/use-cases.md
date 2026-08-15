@@ -89,4 +89,4 @@
 <li>A final bill is not generated when no valid items exist.</li>
 <li>If storage fails, the system reports the failure and retains the bill information for another attempt.</li>
 </ul>
-<h3 id="trigger-1">Trigg
+<h3 id="trigger-1">Trigger:</h3>
