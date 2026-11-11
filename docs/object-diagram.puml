@@ -1,0 +1,67 @@
+@startuml
+
+skinparam objectAttributeIconSize 0
+skinparam objectFontStyle Bold
+skinparam objectFontSize 12
+skinparam objectBackgroundColor #FFFDE7
+skinparam objectBorderColor #888800
+skinparam arrowColor #555555
+skinparam arrowThickness 1.5
+skinparam linetype ortho
+
+title Object Diagram — Single Checkout Scenario\n(Customer Arshit buys 2 Milk + 3 Bread)
+
+object "arshit : Customer" as C {
+  customerId = 1001
+  name = "Arshit Dawra"
+  phone = "9876543210"
+}
+
+object "item01 : Item" as I1 {
+  itemCode = "ITM-001"
+  name = "Amul Full Cream Milk"
+  rate = 28.00
+  stockLevel = 50
+}
+
+object "item02 : Item" as I2 {
+  itemCode = "ITM-002"
+  name = "Britannia Brown Bread"
+  rate = 45.00
+  stockLevel = 30
+}
+
+object "bi01 : BillItem" as BI1 {
+  quantity = 2
+  amount = 56.00
+}
+
+object "bi02 : BillItem" as BI2 {
+  quantity = 3
+  amount = 135.00
+}
+
+object "bill001 : Bill" as B {
+  billId = 5042
+  status = "completed"
+  grandTotal = 191.00
+}
+
+object "receipt001 : Receipt" as R {
+  receiptId = 9001
+  generatedAt = "2026-08-19 10:45:00"
+}
+
+object "storage01 : BillStorage" as S {
+  storageId = 1
+}
+
+C --> B : places
+B --> BI1 : contains
+B --> BI2 : contains
+BI1 --> I1 : references
+BI2 --> I2 : references
+B --> R : generates
+S ..> B : saves
+
+@enduml

@@ -1,0 +1,38 @@
+@startuml
+
+left to right direction
+
+actor Customer
+actor Cashier
+actor Administrator
+
+rectangle "Supermarket Billing System" {
+
+usecase "Search Product" as UC1
+usecase "Add Product to Cart" as UC2
+usecase "Calculate Bill" as UC3
+usecase "Apply Discount" as UC4
+usecase "Generate Bill" as UC5
+usecase "Manage Products" as UC6
+usecase "Save Transaction" as UC7
+
+}
+
+Customer --> UC1
+Customer --> UC2
+
+Cashier --> UC3
+Cashier --> UC5
+
+Administrator --> UC6
+
+UC5 .> UC3 : <<include>>
+
+UC3 .> UC4 : <<extend>>
+note on link
+[Discount Available]
+end note
+
+UC5 .> UC7 : <<include>>
+
+@enduml

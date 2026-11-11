@@ -1,0 +1,77 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle Bold
+skinparam classFontSize 13
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #444444
+skinparam arrowColor #333333
+skinparam arrowThickness 1.5
+skinparam linetype ortho
+
+class Customer {
+  - customerId : int
+  - name : String
+  - phone : String
+  --
+  + enterItemCode(code : String) : void
+  + enterQuantity(qty : int) : void
+  + requestFinalBill() : void
+}
+
+class Item {
+  - itemCode : String
+  - name : String
+  - rate : double
+  - stockLevel : int
+  --
+  + findByCode(code : String) : Item
+  + isValidCode() : boolean
+  + getName() : String
+  + getRate() : double
+}
+
+class BillItem {
+  - quantity : int
+  - amount : double
+  --
+  + validateQuantity() : boolean
+  + calculateAmount() : double
+}
+
+class Bill {
+  - billId : int
+  - status : String
+  - grandTotal : double
+  --
+  + addItem(bi : BillItem) : void
+  + hasItems() : boolean
+  + calculateGrandTotal() : double
+  + generateBill() : void
+}
+
+class Receipt {
+  - receiptId : int
+  - generatedAt : Date
+  --
+  + displayReceipt() : void
+  + printReceipt() : void
+  + fallbackToScreen() : void
+}
+
+class BillStorage {
+  - storageId : int
+  --
+  + saveBill(b : Bill) : boolean
+  + confirmSave() : void
+  + reportFailure() : void
+  + retainForRetry(b : Bill) : void
+}
+
+Customer "1" -- "0..*" Bill : places >
+Bill "1" *-- "1..*" BillItem : contains >
+BillItem "0..*" --> "1" Item : references >
+BillStorage "1" ..> "0..*" Bill : saves >
+Bill "1" --> "1" Receipt : generates >
+
+@enduml
