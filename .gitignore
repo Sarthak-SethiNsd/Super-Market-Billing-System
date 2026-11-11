@@ -1,0 +1,45 @@
+# Build outputs
+backend/build/
+build/
+bin/
+obj/
+*.exe
+*.dll
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+
+# CMake outputs
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+
+# Visual Studio files
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+dist/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# Environment files (retain templates)
+.env
+.env.*
+!.env.example
+
+# Databases & logs
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
