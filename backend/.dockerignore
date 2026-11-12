@@ -1,0 +1,12 @@
+build/
+data/
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.log
+.vs/
+CMakeCache.txt
+CMakeFiles/

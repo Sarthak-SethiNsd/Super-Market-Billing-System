@@ -14,12 +14,14 @@ else()
 endif()
 
 # Global Definitions for Asio, Crow, and CRT
-add_definitions(
-    -DASIO_STANDALONE
-    -D_WIN32_WINNT=0x0601
-    -DNOMINMAX
-    -D_CRT_SECURE_NO_WARNINGS
-)
+add_definitions(-DASIO_STANDALONE)
+if(WIN32)
+    add_definitions(
+        -D_WIN32_WINNT=0x0601
+        -DNOMINMAX
+        -D_CRT_SECURE_NO_WARNINGS
+    )
+endif()
 
 # Include Directories
 set(DOMAIN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -72,10 +74,23 @@ add_library(supermarket_domain STATIC
 
 target_link_libraries(supermarket_domain PUBLIC
     sqlite3_lib
-    bcrypt
-    ws2_32
-    mswsock
 )
+
+if(WIN32)
+    target_link_libraries(supermarket_domain PUBLIC
+        bcrypt
+        ws2_32
+        mswsock
+    )
+else()
+    find_package(Threads REQUIRED)
+    find_package(OpenSSL REQUIRED)
+    target_link_libraries(supermarket_domain PUBLIC
+        OpenSSL::Crypto
+        Threads::Threads
+        ${CMAKE_DL_LIBS}
+    )
+endif()
 
 target_include_directories(supermarket_domain PUBLIC
     $<BUILD_INTERFACE:${DOMAIN_INCLUDE_DIR}>

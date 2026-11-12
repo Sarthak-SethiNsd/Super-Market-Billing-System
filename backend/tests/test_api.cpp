@@ -1,4 +1,6 @@
 #include "server/AppServer.hpp"
+#include "auth/CryptoUtils.hpp"
+#include "repositories/UserRepository.hpp"
 #include <iostream>
 #include <filesystem>
 #include <cassert>
@@ -471,12 +473,54 @@ int main() {
 
                 std::cout << "  -> PASSED\n";
             }
+
+            // 12. Cross-Platform PBKDF2-HMAC-SHA256 & CryptoUtils Compatibility
+            std::cout << "[RUNNING] 12. Cross-Platform PBKDF2-HMAC-SHA256 Hash Compatibility...\n";
+            {
+                // Standard RFC / OpenSSL PBKDF2-HMAC-SHA256 vector ("password", salt="salt" -> "73616c74", 1 iter)
+                const std::string rfcExpected = "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b";
+                TEST_ASSERT(CryptoUtils::hashPasswordPBKDF2("password", "73616c74", 1) == rfcExpected);
+                TEST_ASSERT(CryptoUtils::verifyPasswordPBKDF2("password", "73616c74", 1, rfcExpected));
+
+                // App-profile PBKDF2-HMAC-SHA256 vector (16-byte hex salt, DEFAULT_PBKDF2_ITERATIONS=100000)
+                const std::string katSaltHex = "00112233445566778899aabbccddeeff";
+                const std::string katHashHex = "2c57e14cb855eb40b7c19aed24d142066e5c0e279c8cb4831ddda1557f5748b3";
+                TEST_ASSERT(
+                    CryptoUtils::hashPasswordPBKDF2("SuperSecret123!", katSaltHex, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS) == katHashHex
+                );
+                TEST_ASSERT(
+                    CryptoUtils::verifyPasswordPBKDF2("SuperSecret123!", katSaltHex, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, katHashHex)
+                );
+
+                // Negative verification guards
+                TEST_ASSERT(!CryptoUtils::verifyPasswordPBKDF2("WrongPass123!", katSaltHex, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, katHashHex));
+                TEST_ASSERT(!CryptoUtils::verifyPasswordPBKDF2("SuperSecret123!", "ffeeddccbbaa99887766554433221100", CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, katHashHex));
+                TEST_ASSERT(!CryptoUtils::verifyPasswordPBKDF2("SuperSecret123!", katSaltHex, 1000, katHashHex));
+
+                // Verify random token / salt generation format and uniqueness
+                std::string s1 = CryptoUtils::generateRandomHex(CryptoUtils::SALT_BYTE_LENGTH);
+                std::string s2 = CryptoUtils::generateRandomHex(CryptoUtils::SALT_BYTE_LENGTH);
+                std::string tok = CryptoUtils::generateRandomHex(32);
+                TEST_ASSERT(s1.size() == 32 && s2.size() == 32 && s1 != s2);
+                TEST_ASSERT(tok.size() == 64);
+
+                // Verify cross-platform hash stored directly in DB unlocks via AuthService
+                UserRepository userRepo(server.getDb());
+                userRepo.updateUserPassword("admin", katHashHex, katSaltHex, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS);
+                auto crossUnlock = makeRequest(server, "POST", "/api/auth/admin/unlock", "{\"password\":\"SuperSecret123!\"}");
+                TEST_ASSERT(crossUnlock.code == 200);
+                auto jCross = nlohmann::json::parse(crossUnlock.body);
+                TEST_ASSERT(jCross["success"] == true);
+                TEST_ASSERT(!jCross["data"]["token"].get<std::string>().empty());
+
+                std::cout << "  -> PASSED (Windows CNG & OpenSSL PBKDF2-HMAC-SHA256 vectors match)\n";
+            }
         } // server destructs cleanly here, releasing all SQLite file locks
 
         cleanApiTestDb();
 
         std::cout << "=====================================================\n";
-        std::cout << "        ALL 11 API & AUTH TEST SUITES PASSED!        \n";
+        std::cout << "        ALL 12 API & AUTH TEST SUITES PASSED!        \n";
         std::cout << "=====================================================\n";
         return 0;
     } catch (const std::exception& e) {

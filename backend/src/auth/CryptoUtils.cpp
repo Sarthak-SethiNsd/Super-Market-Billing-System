@@ -6,6 +6,10 @@
 #endif
 #include <windows.h>
 #include <bcrypt.h>
+#else
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <limits>
 #endif
 
 #include <stdexcept>
@@ -36,6 +40,9 @@ std::vector<uint8_t> CryptoUtils::hexToBytes(const std::string& hex) {
 }
 
 std::string CryptoUtils::generateRandomHex(size_t byteCount) {
+    if (byteCount == 0) {
+        return "";
+    }
     std::vector<uint8_t> buffer(byteCount);
 #ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(nullptr, buffer.data(), static_cast<ULONG>(buffer.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
@@ -43,9 +50,11 @@ std::string CryptoUtils::generateRandomHex(size_t byteCount) {
         throw std::runtime_error("Failed to generate cryptographically secure random bytes via BCryptGenRandom");
     }
 #else
-    // Fallback if compiled on non-Windows
-    for (size_t i = 0; i < byteCount; ++i) {
-        buffer[i] = static_cast<uint8_t>(rand() % 256);
+    if (byteCount > static_cast<size_t>((std::numeric_limits<int>::max)())) {
+        throw std::invalid_argument("Random byte count exceeds OpenSSL RAND_bytes limit");
+    }
+    if (RAND_bytes(buffer.data(), static_cast<int>(buffer.size())) != 1) {
+        throw std::runtime_error("Failed to generate cryptographically secure random bytes via OpenSSL RAND_bytes");
     }
 #endif
     return bytesToHex(buffer.data(), buffer.size());
@@ -80,7 +89,26 @@ std::string CryptoUtils::hashPasswordPBKDF2(const std::string& password, const s
         throw std::runtime_error("Failed to derive PBKDF2-HMAC-SHA256 key via BCrypt");
     }
 #else
-    throw std::runtime_error("PBKDF2 not configured for this platform");
+    if (iterations <= 0) {
+        throw std::invalid_argument("PBKDF2 iteration count must be positive");
+    }
+    if (password.size() > static_cast<size_t>((std::numeric_limits<int>::max)()) ||
+        saltBytes.size() > static_cast<size_t>((std::numeric_limits<int>::max)())) {
+        throw std::invalid_argument("PBKDF2 input length exceeds OpenSSL integer limit");
+    }
+    int rc = PKCS5_PBKDF2_HMAC(
+        password.data(),
+        static_cast<int>(password.size()),
+        saltBytes.data(),
+        static_cast<int>(saltBytes.size()),
+        iterations,
+        EVP_sha256(),
+        static_cast<int>(derivedKey.size()),
+        derivedKey.data()
+    );
+    if (rc != 1) {
+        throw std::runtime_error("Failed to derive PBKDF2-HMAC-SHA256 key via OpenSSL PKCS5_PBKDF2_HMAC");
+    }
 #endif
 
     return bytesToHex(derivedKey.data(), derivedKey.size());
