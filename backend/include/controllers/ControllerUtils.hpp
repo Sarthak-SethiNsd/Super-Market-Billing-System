@@ -53,20 +53,44 @@ inline std::string extractBearerToken(const crow::request& req) {
     return "";
 }
 
-inline void applyCors(crow::response& res, const std::string& allowedOrigin) {
-    res.add_header("Access-Control-Allow-Origin", allowedOrigin);
-    if (allowedOrigin != "*") {
-        res.add_header("Vary", "Origin");
+inline std::string resolveCorsOrigin(const std::string& configuredOrigin, const std::string& requestOrigin) {
+    if (configuredOrigin == "*" || configuredOrigin.empty()) {
+        return requestOrigin.empty() ? "*" : requestOrigin;
     }
-    res.add_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.add_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.add_header("Access-Control-Expose-Headers", "X-Total-Count, X-Limit, X-Offset");
-    res.add_header("Access-Control-Allow-Credentials", "true");
+    // Check if configuredOrigin contains comma-separated list
+    if (configuredOrigin.find(',') != std::string::npos) {
+        size_t start = 0;
+        while (start < configuredOrigin.size()) {
+            size_t end = configuredOrigin.find(',', start);
+            if (end == std::string::npos) end = configuredOrigin.size();
+            std::string o = trimCopy(configuredOrigin.substr(start, end - start));
+            if (!requestOrigin.empty() && o == requestOrigin) {
+                return requestOrigin;
+            }
+            start = end + 1;
+        }
+    } else if (!requestOrigin.empty() && trimCopy(configuredOrigin) == requestOrigin) {
+        return requestOrigin;
+    }
+    return configuredOrigin;
 }
 
-inline crow::response corsPreflight(const std::string& allowedOrigin) {
+inline void applyCors(crow::response& res, const std::string& allowedOrigin, const std::string& requestOrigin = "") {
+    std::string effectiveOrigin = resolveCorsOrigin(allowedOrigin, requestOrigin);
+    res.add_header("Access-Control-Allow-Origin", effectiveOrigin);
+    if (effectiveOrigin != "*") {
+        res.add_header("Vary", "Origin");
+        res.add_header("Access-Control-Allow-Credentials", "true");
+    }
+    res.add_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.add_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+    res.add_header("Access-Control-Expose-Headers", "X-Total-Count, X-Limit, X-Offset");
+    res.add_header("Access-Control-Max-Age", "86400");
+}
+
+inline crow::response corsPreflight(const std::string& allowedOrigin, const std::string& requestOrigin = "") {
     crow::response res(204);
-    applyCors(res, allowedOrigin);
+    applyCors(res, allowedOrigin, requestOrigin);
     return res;
 }
 
@@ -157,9 +181,10 @@ struct CorsMiddleware {
 
     void before_handle(crow::request& /*req*/, crow::response& /*res*/, context& /*ctx*/) {}
 
-    void after_handle(crow::request& /*req*/, crow::response& res, context& /*ctx*/) {
+    void after_handle(crow::request& req, crow::response& res, context& /*ctx*/) {
+        std::string reqOrigin = req.get_header_value("Origin");
         if (res.get_header_value("Access-Control-Allow-Origin").empty()) {
-            applyCors(res, allowedOrigin);
+            applyCors(res, allowedOrigin, reqOrigin);
         }
     }
 };

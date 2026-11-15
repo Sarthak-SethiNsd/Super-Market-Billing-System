@@ -5,7 +5,7 @@
 struct ServerConfig {
     int port = 8080;
     std::string host = "0.0.0.0";
-    std::string allowedOrigin = "http://localhost:5173";
+    std::string allowedOrigin = "*";
     std::string dbPath = "data/supermarket.db";
     int sessionDurationSeconds = 3600;
 

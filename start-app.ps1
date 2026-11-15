@@ -14,9 +14,6 @@
 .PARAMETER Port
     Optional backend HTTP port. Defaults to PORT environment variable or 8080.
 
-.PARAMETER BindHost
-    Optional backend bind address. Defaults to HOST environment variable or 127.0.0.1 (local-only).
-
 .PARAMETER CorsAllowedOrigin
     Optional CORS origin for the backend. Defaults to CORS_ALLOWED_ORIGIN or http://localhost:5173.
 
@@ -31,7 +28,6 @@
 param(
     [string]$DbPath = '',
     [int]$Port = 0,
-    [string]$BindHost = '',
     [string]$CorsAllowedOrigin = '',
     [int]$SessionDurationSeconds = 3600,
     [switch]$NoBrowser
@@ -187,11 +183,6 @@ if ($Port -le 0) {
     if ($envPort -and ($envPort -as [int]) -gt 0) { $Port = [int]$envPort } else { $Port = 8080 }
 }
 
-$envHost = [Environment]::GetEnvironmentVariable('HOST')
-if ([string]::IsNullOrWhiteSpace($BindHost)) {
-    if (-not [string]::IsNullOrWhiteSpace($envHost)) { $BindHost = $envHost.Trim() } else { $BindHost = '127.0.0.1' }
-}
-
 $envCors = [Environment]::GetEnvironmentVariable('CORS_ALLOWED_ORIGIN')
 if ([string]::IsNullOrWhiteSpace($CorsAllowedOrigin)) {
     if (-not [string]::IsNullOrWhiteSpace($envCors)) { $CorsAllowedOrigin = $envCors } else { $CorsAllowedOrigin = 'http://localhost:5173' }
@@ -257,7 +248,7 @@ $prevEnv = @{
 try {
     # 6. Set Process Environment Variables Directly & Launch C++ Backend
     $env:PORT                     = "$Port"
-    $env:HOST                     = $BindHost
+    $env:HOST                     = '0.0.0.0'
     $env:CORS_ALLOWED_ORIGIN      = $CorsAllowedOrigin
     $env:DB_PATH                  = $DbPath
     $env:SESSION_DURATION_SECONDS = "$SessionDurationSeconds"
@@ -266,9 +257,8 @@ try {
     }
     $adminPlain = $null
 
-    $healthHost = if ($BindHost -eq '0.0.0.0') { '127.0.0.1' } else { $BindHost }
     Write-Host ""
-    Write-Host "[START] Launching C++ REST API on http://${BindHost}:$Port ..." -ForegroundColor Cyan
+    Write-Host "[START] Launching C++ REST API on http://localhost:$Port ..." -ForegroundColor Cyan
     $backendProc = Start-Process -FilePath $ServerExe `
         -WorkingDirectory $BackendDir `
         -WindowStyle Hidden `
@@ -280,7 +270,7 @@ try {
     [Environment]::SetEnvironmentVariable('ADMIN_INITIAL_PASSWORD', $null, 'Process')
 
     # Wait for Backend /api/health
-    $healthUrl = "http://${healthHost}:$Port/api/health"
+    $healthUrl = "http://127.0.0.1:$Port/api/health"
     $backendReady = $false
     for ($i = 0; $i -lt 30; $i++) {
         if ($backendProc.HasExited) {

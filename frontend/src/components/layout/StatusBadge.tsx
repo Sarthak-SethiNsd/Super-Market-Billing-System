@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useHealth } from '@/context/HealthContext';
 import { RefreshCw } from 'lucide-react';
-import { API_BASE_URL } from '@/services/api';
+import { ConnectionModal } from './ConnectionModal';
 
 export const StatusBadge: React.FC = () => {
-  const { status, healthData, checkHealth } = useHealth();
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const { status, healthData, latencyMs, checkHealth } = useHealth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleManualRefresh = async () => {
+  const handleManualRefresh = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsRefreshing(true);
     await checkHealth();
     setTimeout(() => setIsRefreshing(false), 500);
@@ -17,48 +19,66 @@ export const StatusBadge: React.FC = () => {
     connected: {
       dot: 'bg-emerald-500',
       ping: 'bg-emerald-400',
-      text: 'Connected',
+      text: latencyMs !== null ? `Online (${latencyMs}ms)` : 'Online',
       textColor: 'text-emerald-700',
-      bg: 'bg-emerald-50 border-emerald-200',
-      title: `Backend v${healthData?.version || '1.0.0'} UP`,
+      bg: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100/70',
+      title: `Server Online • v${healthData?.version || '1.0.0'} • Click to view connection details`,
     },
     checking: {
       dot: 'bg-amber-500',
       ping: 'bg-amber-400',
-      text: 'Checking',
+      text: 'Connecting...',
       textColor: 'text-amber-700',
-      bg: 'bg-amber-50 border-amber-200',
-      title: 'Verifying C++ REST backend...',
+      bg: 'bg-amber-50 border-amber-200 hover:bg-amber-100/70',
+      title: 'Verifying POS backend connection...',
     },
     disconnected: {
       dot: 'bg-rose-500',
       ping: 'bg-rose-400',
-      text: 'Disconnected',
+      text: 'Server Offline',
       textColor: 'text-rose-700',
-      bg: 'bg-rose-50 border-rose-200',
-      title: `Cannot reach backend at ${API_BASE_URL}`,
+      bg: 'bg-rose-50 border-rose-200 hover:bg-rose-100/70 animate-pulse',
+      title: 'Backend unreachable. Click to configure connection endpoint.',
     },
   }[status];
 
   return (
-    <div
-      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.textColor} transition-all shadow-sm`}
-      title={config.title}
-    >
-      <span className="relative flex h-2 w-2">
-        {status === 'connected' && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${config.ping}`} />
-        )}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${config.dot}`} />
-      </span>
-      <span>Backend: {config.text}</span>
-      <button
-        onClick={handleManualRefresh}
-        className="ml-1 text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
-        title="Re-check backend health"
+    <>
+      <div
+        onClick={() => setIsModalOpen(true)}
+        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.textColor} transition-all shadow-2xs cursor-pointer select-none`}
+        title={config.title}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsModalOpen(true);
+          }
+        }}
       >
-        <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-      </button>
-    </div>
+        <span className="relative flex h-2 w-2">
+          {status === 'connected' && (
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${config.ping}`} />
+          )}
+          <span className={`relative inline-flex rounded-full h-2 w-2 ${config.dot}`} />
+        </span>
+        <span className="font-semibold">{config.text}</span>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          className="ml-0.5 text-slate-400 hover:text-slate-700 transition-colors focus:outline-none p-0.5"
+          title="Re-check server connection"
+          aria-label="Refresh connection status"
+        >
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <ConnectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   );
 };

@@ -30,6 +30,7 @@ export const App: React.FC = () => {
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="admin" element={<AdminPage />} />
               <Route path="oop-concepts" element={<OopConceptsPage />} />
+              <Route path="system-architecture" element={<OopConceptsPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>

@@ -96,10 +96,10 @@ export const TransactionsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Receipt className="w-5 h-5 text-indigo-600" />
-            Transaction History & Invoices
+            Customer Receipts & Transaction History
           </h2>
-          <p className="text-sm text-slate-500">
-            Immutable customer sales ledger with frozen historical snapshots in SQLite.
+          <p className="text-xs text-slate-500">
+            Customer sales transaction history, itemized receipt lookup, and verified invoice records.
           </p>
         </div>
 

@@ -213,14 +213,14 @@ export const OopConceptsPage: React.FC = () => {
             <div className="space-y-3 max-w-3xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
                 <Cpu className="w-3.5 h-3.5" />
-                C++17 Academic Architecture Explorer • Verified Against Production Code
+                System Architecture & Technical Specifications • C++17 Domain Engine
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
                 <Code2 className="w-7 h-7 text-emerald-400 shrink-0" />
-                Supermarket System OOP Concepts Explorer
+                ApexMart Platform Architecture & OOP Showcase
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Why OOP here? A real supermarket billing system must guard against negative inventory, handle perishable vs. non-perishable rules polymorphically, apply interchangeable discount policies in exact integer paise, and guarantee ACID SQLite rollback if checkout fails. Every concept below maps directly to verified source files inside{' '}
+                This section documents the underlying software architecture, design patterns, and engineering principles powering the ApexMart retail platform. A real supermarket billing system must guard against negative inventory, handle perishable vs. non-perishable rules polymorphically, apply interchangeable discount policies in exact integer paise, and guarantee ACID SQLite rollback if checkout fails. Every architectural concept below maps directly to verified source files inside{' '}
                 <code className="font-mono text-emerald-300 bg-slate-800/80 px-1.5 py-0.5 rounded">
                   Supermarket_Management_System/backend/
                 </code>

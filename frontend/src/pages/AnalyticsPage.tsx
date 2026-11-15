@@ -192,10 +192,10 @@ export const AnalyticsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-600" />
-            Executive Sales & Inventory Analytics
+            Store Sales Performance & Analytics
           </h2>
-          <p className="text-sm text-slate-500">
-            Real-time business intelligence calculated directly from immutable SQLite invoices.
+          <p className="text-xs text-slate-500">
+            Revenue summaries, transaction volume, basket values, and product sales distribution across operational periods.
           </p>
         </div>
 

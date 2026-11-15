@@ -63,8 +63,8 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
               <Receipt className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Historical Invoice Inspector</h3>
-              <p className="text-xs text-slate-500">Immutable line-item snapshot from SQLite</p>
+              <h3 className="font-bold text-slate-900 text-sm">Customer Receipt & Invoice Viewer</h3>
+              <p className="text-xs text-slate-500">Official sales receipt record</p>
             </div>
           </div>
           <button
@@ -108,8 +108,8 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
 
               {/* Line Items Table with Snapshots */}
               <div className="space-y-2">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Snapshot Line Items ({invoice.items?.length || 0})
+                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  Purchased Items ({invoice.items?.length || 0})
                 </div>
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -164,7 +164,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
               </div>
 
               <div className="text-center text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-                Verified against SQLite database. Snapshots remain immutable across product updates.
+                Official store receipt. Items may be returned or exchanged within 7 days.
               </div>
             </div>
           ) : null}
@@ -190,7 +190,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
             onClick={onClose}
             className="bg-slate-900 hover:bg-slate-800 text-white"
           >
-            Close Inspector
+            Close Receipt
           </Button>
         </div>
       </div>

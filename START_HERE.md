@@ -10,7 +10,7 @@ Welcome! Follow these steps to build, test, and run the **Supermarket Billing & 
 
 Ensure the following tools are installed on your Windows machine:
 - **Visual Studio 2022 Build Tools** (or Visual Studio Community) with **Desktop development with C++** (MSVC C++17 + Windows SDK) and **CMake**
-- **Node.js 20 or newer** (`20+` / `22+` / `24+`) and **npm** *(Node.js 20 or newer is required; React 18 remains in use and React Router 7 is installed)*
+- **Node.js** (LTS 18+ / 20+ / 22+ / 24+) and **npm**
 
 *(All C++ third-party libraries — SQLite3, Crow, Standalone Asio, and nlohmann/json — are already bundled under `backend/third_party/`.)*
 
@@ -61,7 +61,7 @@ Press **`Ctrl+C`** in the PowerShell window when done to cleanly stop both serve
 
 - **Admin Password Persistence:** Once initialized in SQLite, subsequent runs keep the stored PBKDF2 hash and do **not** overwrite it from `ADMIN_INITIAL_PASSWORD`. No built-in password-reset mechanism exists; if you need a clean reset, stop the server, back up/move `backend/data/supermarket.db*` (including `-wal`/`-shm` sidecars), or pass a new `-DbPath` to `.\start-app.ps1`.
 - **Sessions After Restart:** Admin bearer tokens are held in backend memory only. Restarting the backend logs out active Admin sessions, and Staff simply re-unlocks Admin Mode in the header.
-- **Frontend Dependencies & Offline Operation:** React 18 remains in use with React Router 7 installed (requiring Node.js 20 or newer). First dependency installation (`.\build-and-test.ps1 -InstallDependencies` or `npm ci` when `frontend/node_modules/` is missing) may require internet or cached npm packages. The application runs offline after dependencies are installed (all C++ dependencies are bundled under `backend/third_party/`, and font links in `frontend/index.html` fall back to system fonts).
+- **Offline Capability vs. First Install:** The first-time npm install (`.\build-and-test.ps1 -InstallDependencies` or `npm ci` when `frontend/node_modules/` is missing) may require internet access or cached npm packages. Once dependencies are installed, the application runs completely **offline** (all C++ dependencies are bundled under `backend/third_party/`, and font links in `frontend/index.html` fall back to system fonts).
 - **Windows Requirement:** Backend PBKDF2 cryptography uses Windows CNG (`bcrypt.h`), so the server builds and runs on Windows only.
 
 ---

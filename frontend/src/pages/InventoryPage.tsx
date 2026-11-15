@@ -148,10 +148,10 @@ export const InventoryPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Boxes className="w-5 h-5 text-emerald-600" />
-            Inventory Stock & Movement Auditing
+            Inventory Stock Control & Movement Audit
           </h2>
-          <p className="text-sm text-slate-500">
-            Real-time physical stock metrics and complete historical movement audit ledger.
+          <p className="text-xs text-slate-500">
+            Real-time physical stock metrics, supplier delivery adjustments, and complete historical audit ledger.
           </p>
         </div>
 
@@ -172,13 +172,13 @@ export const InventoryPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={() => setIsAdjustModalOpen(true)}
-              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
+              className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold"
             >
               <Sliders className="w-4 h-4" />
               Adjust Stock
             </Button>
           ) : (
-            <Badge variant="staff">Staff Mode (Audit View Only)</Badge>
+            <Badge variant="staff" className="text-xs py-1 px-2.5">Cashier Mode (Stock View Only)</Badge>
           )}
         </div>
       </div>
