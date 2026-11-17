@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <cstdlib>
+#include <filesystem>
 
 struct ServerConfig {
     int port = 8080;
@@ -28,6 +29,13 @@ struct ServerConfig {
         const char* db = std::getenv("DB_PATH");
         if (db && std::string(db).find_first_not_of(" \t\r\n") != std::string::npos) {
             cfg.dbPath = db;
+        } else {
+            // When started directly from build/Release without DB_PATH, resolve canonical backend/data/supermarket.db
+            try {
+                if (!std::filesystem::exists("data/supermarket.db") && std::filesystem::exists("../../data/supermarket.db")) {
+                    cfg.dbPath = "../../data/supermarket.db";
+                }
+            } catch (...) {}
         }
 
         const char* dur = std::getenv("SESSION_DURATION_SECONDS");

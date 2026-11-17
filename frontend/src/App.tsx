@@ -4,7 +4,10 @@ import { AuthProvider } from '@/context/AuthContext';
 import { HealthProvider } from '@/context/HealthContext';
 import { Layout } from '@/components/layout/Layout';
 
-// Page components
+// Customer-Facing Public Website
+import { HomePage } from '@/pages/HomePage';
+
+// Internal Staff & Store Management Pages
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { BillingPage } from '@/pages/BillingPage';
@@ -21,18 +24,25 @@ export const App: React.FC = () => {
       <AuthProvider>
         <HealthProvider>
           <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="products" element={<ProductsPage />} />
-              <Route path="billing" element={<BillingPage />} />
-              <Route path="transactions" element={<TransactionsPage />} />
-              <Route path="inventory" element={<InventoryPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="admin" element={<AdminPage />} />
-              <Route path="oop-concepts" element={<OopConceptsPage />} />
-              <Route path="system-architecture" element={<OopConceptsPage />} />
-              <Route path="*" element={<NotFoundPage />} />
+            {/* 1. Public Customer-Facing Supermarket Company Website */}
+            <Route path="/" element={<HomePage />} />
+
+            {/* 2. Internal Staff Mode & Supermarket Operations Application */}
+            <Route element={<Layout />}>
+              <Route path="/staff" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/oop-concepts" element={<OopConceptsPage />} />
+              <Route path="/system-architecture" element={<OopConceptsPage />} />
             </Route>
+
+            {/* 3. Fallback Route */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </HealthProvider>
       </AuthProvider>

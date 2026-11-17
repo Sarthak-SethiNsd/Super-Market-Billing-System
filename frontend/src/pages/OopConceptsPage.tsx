@@ -207,21 +207,21 @@ export const OopConceptsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 1. Introductory Hero Section */}
-      <Card className="border-slate-200 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white overflow-hidden shadow-md">
-        <CardContent className="p-6 sm:p-8 space-y-5">
+      <Card className="border-[#334c41] bg-[#263B32] text-white overflow-hidden shadow-xs rounded">
+        <CardContent className="p-6 sm:p-7 space-y-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-3 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
-                <Cpu className="w-3.5 h-3.5" />
-                System Architecture & Technical Specifications • C++17 Domain Engine
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#1f3029] border border-[#334c41] text-[#d6e2dc] text-xs font-semibold">
+                <Cpu className="w-3.5 h-3.5 text-[#71836A]" />
+                C++17 Academic Architecture Explorer • Verified Against Production Code
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
-                <Code2 className="w-7 h-7 text-emerald-400 shrink-0" />
-                ApexMart Platform Architecture & OOP Showcase
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
+                <Code2 className="w-7 h-7 text-[#d6e2dc] shrink-0" />
+                Supermarket System OOP Concepts Explorer
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                This section documents the underlying software architecture, design patterns, and engineering principles powering the ApexMart retail platform. A real supermarket billing system must guard against negative inventory, handle perishable vs. non-perishable rules polymorphically, apply interchangeable discount policies in exact integer paise, and guarantee ACID SQLite rollback if checkout fails. Every architectural concept below maps directly to verified source files inside{' '}
-                <code className="font-mono text-emerald-300 bg-slate-800/80 px-1.5 py-0.5 rounded">
+              <p className="text-xs sm:text-sm text-[#b4c7be] leading-relaxed">
+                Why OOP here? A real supermarket billing system must guard against negative inventory, handle perishable vs. non-perishable rules polymorphically, apply interchangeable discount policies in exact integer paise, and guarantee ACID SQLite rollback if checkout fails. Every concept below maps directly to verified source files inside{' '}
+                <code className="font-mono text-[#e4ece7] bg-[#1f3029] px-1.5 py-0.5 rounded border border-[#334c41]">
                   Supermarket_Management_System/backend/
                 </code>
                 .
@@ -230,25 +230,25 @@ export const OopConceptsPage: React.FC = () => {
 
             {/* Verified Audit Summary Badges */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 shrink-0">
-              <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">Audited</div>
-                <div className="text-xl font-extrabold font-mono text-white">{auditStats.total}</div>
+              <div className="rounded bg-[#1f3029] border border-[#334c41] px-4 py-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-[#9cb5a8]">Audited</div>
+                <div className="text-xl font-bold font-mono text-white">{auditStats.total}</div>
               </div>
-              <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-emerald-300">Verified</div>
-                <div className="text-xl font-extrabold font-mono text-emerald-400">
+              <div className="rounded bg-[#1f3029] border border-[#334c41] px-4 py-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-[#9cb5a8]">Verified</div>
+                <div className="text-xl font-bold font-mono text-[#d6e2dc]">
                   {auditStats.verified}
                 </div>
               </div>
-              <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-amber-300">Partial</div>
-                <div className="text-xl font-extrabold font-mono text-amber-400">
+              <div className="rounded bg-[#1f3029] border border-[#334c41] px-4 py-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-[#dfc39a]">Partial</div>
+                <div className="text-xl font-bold font-mono text-[#dfc39a]">
                   {auditStats.partial}
                 </div>
               </div>
-              <div className="rounded-xl bg-slate-800/80 border border-white/10 px-4 py-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">Modules</div>
-                <div className="text-xl font-extrabold font-mono text-cyan-300">6</div>
+              <div className="rounded bg-[#1f3029] border border-[#334c41] px-4 py-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-[#9cb5a8]">Modules</div>
+                <div className="text-xl font-bold font-mono text-white">6</div>
               </div>
             </div>
           </div>

@@ -135,6 +135,23 @@ target_include_directories(supermarket_server PRIVATE
     ${NLOHMANN_INCLUDE_DIR}
 )
 
+# Dedicated Demonstration Dataset Seeder (Stage 9J)
+add_executable(supermarket_seeder
+    src/seeder_main.cpp
+)
+
+target_link_libraries(supermarket_seeder PRIVATE
+    supermarket_domain
+)
+
+target_include_directories(supermarket_seeder PRIVATE
+    ${DOMAIN_INCLUDE_DIR}
+    ${SQLITE_INCLUDE_DIR}
+    ${CROW_INCLUDE_DIR}
+    ${ASIO_INCLUDE_DIR}
+    ${NLOHMANN_INCLUDE_DIR}
+)
+
 # Unit Testing Subdirectory
 enable_testing()
 add_subdirectory(tests)

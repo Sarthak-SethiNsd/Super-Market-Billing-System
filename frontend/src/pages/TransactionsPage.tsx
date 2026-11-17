@@ -94,12 +94,12 @@ export const TransactionsPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-indigo-600" />
-            Customer Receipts & Transaction History
+          <h2 className="text-xl font-bold text-[#303631] tracking-tight flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-[#285943]" />
+            Transaction History & Invoices
           </h2>
-          <p className="text-xs text-slate-500">
-            Customer sales transaction history, itemized receipt lookup, and verified invoice records.
+          <p className="text-xs text-[#777D76]">
+            Immutable customer sales ledger with frozen historical snapshots in SQLite.
           </p>
         </div>
 
@@ -108,10 +108,10 @@ export const TransactionsPage: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={fetchBills}
-            className="text-xs text-slate-600 hover:text-slate-900 gap-1.5"
+            className="text-xs text-[#303631] hover:text-[#285943] gap-1.5"
             title="Refresh Invoices"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 text-[#777D76]" />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
           <Badge variant="default" className="font-mono text-xs">
@@ -122,56 +122,56 @@ export const TransactionsPage: React.FC = () => {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+        <div className="flex items-start gap-2.5 p-3.5 rounded bg-[#F8EFEF] border border-[#ECD1D0] text-xs text-[#A63A38]">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#A63A38]" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <CreditCard className="w-4 h-4 text-indigo-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-2 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <CreditCard className="w-4 h-4 text-[#285943]" />
             Completed Bills
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-2xl font-bold text-[#303631] font-mono">
             {totalBillsCount}
           </div>
-          <span className="text-[11px] text-slate-400">Archived transactions</span>
+          <span className="text-[11px] text-[#777D76]">Archived transactions</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-2 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <TrendingUp className="w-4 h-4 text-[#71836A]" />
             Gross Sales
           </div>
-          <div className="text-2xl font-extrabold text-blue-700 font-mono">
+          <div className="text-2xl font-bold text-[#303631] font-mono">
             ₹{grossRevenue.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">Before promotional discounts</span>
+          <span className="text-[11px] text-[#777D76]">Before promotional discounts</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Tag className="w-4 h-4 text-emerald-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-2 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <Tag className="w-4 h-4 text-[#C87D20]" />
             Promotions Given
           </div>
-          <div className="text-2xl font-extrabold text-emerald-700 font-mono">
+          <div className="text-2xl font-bold text-[#C87D20] font-mono">
             ₹{totalPromotions.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">C++ Strategy savings</span>
+          <span className="text-[11px] text-[#777D76]">C++ Strategy savings</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Receipt className="w-4 h-4 text-purple-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-2 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <Receipt className="w-4 h-4 text-[#285943]" />
             Net Revenue
           </div>
-          <div className="text-2xl font-extrabold text-purple-700 font-mono">
+          <div className="text-2xl font-bold text-[#285943] font-mono">
             ₹{netRevenue.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">Total collected amount</span>
+          <span className="text-[11px] text-[#777D76]">Total collected amount</span>
         </Card>
       </div>
 

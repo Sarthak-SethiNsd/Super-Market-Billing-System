@@ -8,7 +8,7 @@ export const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 print:block print:h-auto print:w-auto print:overflow-visible print:bg-white">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F6F1] text-[#303631] print:block print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* Sidebar Navigation */}
       <Sidebar
         collapsed={collapsed}

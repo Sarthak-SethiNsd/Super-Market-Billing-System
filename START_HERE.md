@@ -1,75 +1,113 @@
-# Evaluator Quick Start (`START_HERE.md`)
+# Evaluator Quick Start Guide (`START_HERE.md`)
 
-Welcome! Follow these steps to build, test, and run the **Supermarket Billing & Inventory Management System** on **Windows 10 / 11**.
+Welcome! This guide provides the fastest path to compile, test, and run the **Supermarket Billing & Inventory Management System (ApexMart)** on **Windows 10 / 11**.
 
-> The original academic console submission at `../Supermarket_billing_System/1.cpp` has been preserved completely unmodified.
-
----
-
-## 1. Prerequisites
-
-Ensure the following tools are installed on your Windows machine:
-- **Visual Studio 2022 Build Tools** (or Visual Studio Community) with **Desktop development with C++** (MSVC C++17 + Windows SDK) and **CMake**
-- **Node.js** (LTS 18+ / 20+ / 22+ / 24+) and **npm**
-
-*(All C++ third-party libraries — SQLite3, Crow, Standalone Asio, and nlohmann/json — are already bundled under `backend/third_party/`.)*
+> [!NOTE]
+> The original academic console submission file at `../Supermarket_billing_System/1.cpp` is preserved completely unmodified.
 
 ---
 
-## 2. Build & Verify Everything
+## 1. Prerequisites Checklist
 
-Open **PowerShell** inside `Supermarket_Management_System/` and run:
+Ensure the following tools are available on your host machine:
+- **Visual Studio 2022 Build Tools** (or Community/Professional) with the **Desktop development with C++** workload (MSVC C++17 + Windows SDK).
+- **CMake** (3.15 or newer).
+- **Node.js** (LTS 18 / 20 / 22 / 24) and **npm**.
+
+*(All third-party C++ dependencies — SQLite3 amalgamation, Crow, Standalone Asio, and nlohmann/json — are bundled directly inside `backend/third_party/`.)*
+
+---
+
+## 2. Compile & Run Automated Tests (One Command)
+
+Open **PowerShell** inside `Supermarket_Management_System/` (or `Supermarket_Submission_Staging/Supermarket_Management_System/`):
 
 ```powershell
+# On a clean workstation (installs frontend node_modules)
 .\build-and-test.ps1 -InstallDependencies
+
+# On subsequent runs (runs offline; executes all 5 C++ test suites and Vite build)
+.\build-and-test.ps1
 ```
 
-This configures CMake, compiles the Release C++ binaries, runs all **5 C++ CTest suites**, installs frontend packages via `npm ci`, and verifies the React + TypeScript production build.
-
-*(If `frontend/node_modules/` is already installed, omit `-InstallDependencies`.)*
+This script:
+1. Detects CMake, MSVC (`cl.exe`), Node.js, and npm.
+2. Compiles the C++ backend in Release mode.
+3. Executes all **5 CTest test suites** (34/34 passing test cases).
+4. Installs frontend dependencies and verifies the TypeScript production build (`tsc -b && vite build`).
 
 ---
 
-## 3. Launch the Application (One Command)
+## 3. Seed Demonstration Dataset (If Fresh Database)
 
-From `Supermarket_Management_System/`, run:
+The application uses the canonical database location:
+$$\mathbf{backend/data/supermarket.db}$$
+
+The database already comes pre-seeded with **25 representative Indian retail products** across **7 categories** and an administrator account (`admin` / `admin123`). 
+
+If you ever wish to re-seed or verify the database, run:
+```powershell
+cd backend\build\Release
+.\supermarket_seeder.exe
+cd ..\..\..
+```
+*(The seeder is 100% idempotent: running it against an already-seeded database safely skips existing records.)*
+
+---
+
+## 4. Launch the Application (One Command)
+
+From `Supermarket_Management_System/` in PowerShell:
 
 ```powershell
 .\start-app.ps1
 ```
 
-On first launch (fresh SQLite database at `backend/data/supermarket.db`):
-1. The script prompts securely (hidden input) for an initial **Administrator password** (`ADMIN_INITIAL_PASSWORD`, minimum 6 characters).
-2. Both the C++ REST API (`http://localhost:8080`) and React frontend (`http://localhost:5173`) start automatically.
-3. Your default browser opens at `http://localhost:5173`.
+### What Happens:
+1. The script detects `backend/data/supermarket.db` and launches the C++ backend on port `8080`.
+2. Starts the React + Vite frontend on port `5173`.
+3. Opens your default web browser automatically to `http://localhost:5173`.
 
-Press **`Ctrl+C`** in the PowerShell window when done to cleanly stop both servers. Your SQLite database is preserved across restarts.
-
----
-
-## 4. Suggested Demo Walkthrough
-
-1. **Staff POS Default:** Notice the header opens in **Staff Mode (POS)**. Operations like **Product Creation**, **Brand/Category Management**, and **Stock Adjustments** are protected (`401` on backend) until unlocked.
-2. **Unlock Admin Mode:** Click **Unlock Admin** in the top header and enter the administrator password you chose at startup.
-3. **Create Catalog Items:** Add Brands/Categories under **Admin Management**, then create Perishable & Non-Perishable products with Percentage or Fixed discounts under **Product Catalog**.
-4. **Test POS Checkout:** Go to **Billing / POS**, add items to the cart, complete checkout, and inspect the formatted receipt & **Transaction History** snapshot.
-5. **Explore C++ Architecture:** Visit **OOP Concepts Explorer** (`/oop-concepts`) for live class diagrams, code excerpts mapped to real `backend/` files, an interactive Discount Strategy simulator, Object Slicing demo, and quiz.
+> **To stop the application:** Press **`Ctrl+C`** in the PowerShell window. Both child processes will terminate cleanly without deleting database records.
 
 ---
 
-## 5. Important Notes
+## 5. Quick Walkthrough for Evaluators
 
-- **Admin Password Persistence:** Once initialized in SQLite, subsequent runs keep the stored PBKDF2 hash and do **not** overwrite it from `ADMIN_INITIAL_PASSWORD`. No built-in password-reset mechanism exists; if you need a clean reset, stop the server, back up/move `backend/data/supermarket.db*` (including `-wal`/`-shm` sidecars), or pass a new `-DbPath` to `.\start-app.ps1`.
-- **Sessions After Restart:** Admin bearer tokens are held in backend memory only. Restarting the backend logs out active Admin sessions, and Staff simply re-unlocks Admin Mode in the header.
-- **Offline Capability vs. First Install:** The first-time npm install (`.\build-and-test.ps1 -InstallDependencies` or `npm ci` when `frontend/node_modules/` is missing) may require internet access or cached npm packages. Once dependencies are installed, the application runs completely **offline** (all C++ dependencies are bundled under `backend/third_party/`, and font links in `frontend/index.html` fall back to system fonts).
-- **Windows Requirement:** Backend PBKDF2 cryptography uses Windows CNG (`bcrypt.h`), so the server builds and runs on Windows only.
+1. **Public Customer Website (`/`):**
+   - The browser opens to the public homepage for **ApexMart**.
+   - Notice the customer-focused company presentation, department highlights, and customer commitments.
+   - Click the **Staff Mode** button in the top navigation bar to access the management portal (`/dashboard`).
+2. **Product Catalog (`/products`):**
+   - Inspect the **25 demonstration products** across 7 categories.
+   - Note the **Perishable** badges with ISO expiry dates and active percentage/fixed discounts.
+   - Notice the **Low Stock** badge on `Fresh Organic Baby Spinach Palak 250g` (stock = 3).
+3. **POS Terminal & Checkout (`/billing`):**
+   - In the search bar, type `Atta` or `Rice` to test instant reactive search.
+   - Click cards to add items to cart; adjust quantities and observe reactive subtotal and discount calculations.
+   - Click **Complete Sale & Print**. Verify the instant modal receipt and stock decrement.
+4. **Stock Movement Audit Ledger (`/inventory`):**
+   - Review the stock movement history table. Verify that the recent sale is recorded as an immutable `SALE` movement with negative quantity.
+5. **Unlock Admin Privileges:**
+   - In the top header, click **Unlock Admin**.
+   - Enter password: `admin123`.
+   - The UI activates Admin Mode (golden badge), unlocking product creation, brand/category management, and manual stock adjustments.
+6. **OOP Concepts Explorer (`/oop-concepts`):**
+   - Visit the interactive educational portal to explore class hierarchy diagrams, dynamic polymorphism simulations, object slicing demos, and code excerpts mapped directly to C++ source files.
 
 ---
 
-## 6. Troubleshooting
+## 6. Comprehensive Documentation Directory
 
-- **Port `8080` or `5173` Already in Use:** Stop the conflicting listener (`Get-NetTCPConnection -LocalPort 8080,5173 -State Listen`) or launch the backend on a different port with `.\start-app.ps1 -Port 8081` (Vite uses strict port `5173` to match default CORS).
-- **Admin Unlock Returns HTTP `503` on Fresh Database:** Happens if `supermarket_server.exe` was started manually against a new database without setting `$env:ADMIN_INITIAL_PASSWORD` (minimum `6` characters; `.env` files are not auto-read). Stop the backend, set `ADMIN_INITIAL_PASSWORD` in PowerShell, or launch with `.\start-app.ps1`.
-- **Changing `ADMIN_INITIAL_PASSWORD` Does Not Update Login:** The stored database hash cannot be overwritten via environment variable, and there is no reset mechanism. Back up/move the existing `.db*` files before initializing a new database.
-- **`Admin Mode` Relocked After Server Restart:** Restarting the backend clears in-memory session tokens; click **Unlock Admin** in the header to sign in again.
-- **`npm ci` Fails Offline:** Connect to the internet once or ensure required npm packages from `frontend/package-lock.json` are already in the local npm cache (`.\build-and-test.ps1` skips `npm ci` automatically whenever `frontend/node_modules/` already exists).
+For in-depth architectural, database, and operational documentation, refer to the [`docs/`](./docs/) directory:
+- [`docs/PROJECT_OVERVIEW.md`](./docs/PROJECT_OVERVIEW.md) — Problem statement, scope, and objectives.
+- [`docs/FEATURES_AND_MODULES.md`](./docs/FEATURES_AND_MODULES.md) — Detailed feature specifications.
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — System layers, request lifecycles, and Mermaid diagrams.
+- [`docs/OOP_CONCEPTS.md`](./docs/OOP_CONCEPTS.md) — Academic OOP concepts mapped to C++ source files.
+- [`docs/DATABASE_SCHEMA.md`](./docs/DATABASE_SCHEMA.md) — SQLite schema, foreign keys, paise currency invariant, and backups.
+- [`docs/API_REFERENCE.md`](./docs/API_REFERENCE.md) — Complete Crow REST API endpoint documentation.
+- [`docs/SETUP_AND_CONFIGURATION.md`](./docs/SETUP_AND_CONFIGURATION.md) — Development prerequisites and environment variables.
+- [`docs/DEMO_GUIDE.md`](./docs/DEMO_GUIDE.md) — Step-by-step evaluator demonstration script.
+- [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) — Docker build, cloud hosting, and operational constraints.
+- [`docs/TESTING_AND_VERIFICATION.md`](./docs/TESTING_AND_VERIFICATION.md) — Automated CTest suites and test results.
+- [`docs/TROUBLESHOOTING.md`](./docs/TROUBLESHOOTING.md) — Resolving port conflicts and common configuration issues.

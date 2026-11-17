@@ -51,21 +51,21 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
         aria-modal="true"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-indigo-50/30">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#334c41] bg-[#263B32] text-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-600/10 text-purple-700 flex items-center justify-center border border-purple-200">
-              <Lock className="w-4 h-4" />
+            <div className="w-8 h-8 rounded bg-[#1f3029] text-[#71836A] flex items-center justify-center border border-[#334c41]">
+              <Lock className="w-4 h-4 text-[#71836A]" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Unlock Administrator Privileges</h3>
-              <p className="text-xs text-slate-500">Requires C++ backend PBKDF2 verification</p>
+              <h3 className="font-bold text-white text-sm">Unlock Administrator Privileges</h3>
+              <p className="text-xs text-[#d6e2dc]">Requires backend PBKDF2 verification</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close unlock administrator modal"
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-white/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            className="text-[#d6e2dc] hover:text-white p-1 rounded hover:bg-[#1f3029] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943]"
             disabled={isLoading}
           >
             <X className="w-5 h-5" />
@@ -124,7 +124,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
               variant="primary"
               size="sm"
               isLoading={isLoading}
-              className="bg-purple-600 hover:bg-purple-700 focus:ring-purple-500 text-white gap-1.5"
+              className="bg-[#285943] hover:bg-[#1e4433] focus:ring-[#285943] text-white gap-1.5"
             >
               <ShieldCheck className="w-4 h-4" />
               Unlock Session

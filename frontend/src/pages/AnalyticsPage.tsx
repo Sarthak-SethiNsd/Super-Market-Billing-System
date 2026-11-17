@@ -178,10 +178,10 @@ export const AnalyticsPage: React.FC = () => {
     }
 
     return [
-      { name: 'Sales (Checkout)', value: counts.SALE, color: '#3b82f6' },
-      { name: 'Restock (Addition)', value: counts.ADDITION, color: '#10b981' },
-      { name: 'Reductions', value: counts.REDUCTION, color: '#f43f5e' },
-      { name: 'Adjustments', value: counts.ADJUSTMENT, color: '#8b5cf6' },
+      { name: 'Sales (Checkout)', value: counts.SALE, color: '#285943' },
+      { name: 'Restock (Addition)', value: counts.ADDITION, color: '#71836A' },
+      { name: 'Reductions', value: counts.REDUCTION, color: '#A63A38' },
+      { name: 'Adjustments', value: counts.ADJUSTMENT, color: '#C87D20' },
     ].filter((item) => item.value > 0);
   }, [filteredMovements, dateFilter, invSummary]);
 
@@ -192,10 +192,10 @@ export const AnalyticsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-600" />
-            Store Sales Performance & Analytics
+            Executive Sales & Inventory Analytics
           </h2>
-          <p className="text-xs text-slate-500">
-            Revenue summaries, transaction volume, basket values, and product sales distribution across operational periods.
+          <p className="text-sm text-slate-500">
+            Real-time business intelligence calculated directly from immutable SQLite invoices.
           </p>
         </div>
 
@@ -245,59 +245,59 @@ export const AnalyticsPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <DollarSign className="w-4 h-4 text-[#285943]" />
             Net Revenue
           </div>
-          <div className="text-2xl font-extrabold text-emerald-700 font-mono">
+          <div className="text-2xl font-bold text-[#285943] font-mono">
             ₹{netRevenue.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">{isAllTime ? 'Verified database total' : 'In filtered period'}</span>
+          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'Verified database total' : 'In filtered period'}</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <CreditCard className="w-4 h-4 text-indigo-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <CreditCard className="w-4 h-4 text-[#71836A]" />
             Total Orders
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-2xl font-bold text-[#303631] font-mono">
             {totalBills}
           </div>
-          <span className="text-[11px] text-slate-400">{isAllTime ? 'All-time verified' : 'In filtered period'}</span>
+          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'All-time verified' : 'In filtered period'}</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Package className="w-4 h-4 text-blue-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <Package className="w-4 h-4 text-[#71836A]" />
             Units Sold
           </div>
-          <div className="text-2xl font-extrabold text-blue-700 font-mono">
+          <div className="text-2xl font-bold text-[#303631] font-mono">
             {totalItemsSold}
           </div>
-          <span className="text-[11px] text-slate-400">{isAllTime ? 'All units checked out' : 'In filtered period'}</span>
+          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'All units checked out' : 'In filtered period'}</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <TrendingUp className="w-4 h-4 text-purple-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <TrendingUp className="w-4 h-4 text-[#71836A]" />
             Average Order (AOV)
           </div>
-          <div className="text-2xl font-extrabold text-purple-700 font-mono">
+          <div className="text-2xl font-bold text-[#303631] font-mono">
             ₹{averageBillValue.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">Per bill average</span>
+          <span className="text-[11px] text-[#777D76]">Per bill average</span>
         </Card>
 
-        <Card className="p-4 border-slate-200">
-          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Tag className="w-4 h-4 text-amber-600" />
+        <Card className="p-4 border-[#E5E4DC]">
+          <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
+            <Tag className="w-4 h-4 text-[#C87D20]" />
             Discounts Given
           </div>
-          <div className="text-2xl font-extrabold text-amber-700 font-mono">
+          <div className="text-2xl font-bold text-[#C87D20] font-mono">
             ₹{totalDiscounts.toFixed(2)}
           </div>
-          <span className="text-[11px] text-slate-400">{isAllTime ? 'Total strategy savings' : 'In filtered period'}</span>
+          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'Total strategy savings' : 'In filtered period'}</span>
         </Card>
       </div>
 
@@ -337,27 +337,27 @@ export const AnalyticsPage: React.FC = () => {
                   <AreaChart data={revenueTrendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#285943" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#285943" stopOpacity={0.0} />
                       </linearGradient>
                       <linearGradient id="colorGross" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#71836A" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#71836A" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} />
-                    <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(val) => `₹${val}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DC" />
+                    <XAxis dataKey="date" stroke="#777D76" fontSize={11} />
+                    <YAxis stroke="#777D76" fontSize={11} tickFormatter={(val) => `₹${val}`} />
                     <Tooltip
                       formatter={(val: number) => [`₹${val.toFixed(2)}`, '']}
-                      contentStyle={{ backgroundColor: '#0f172a', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#263B32', color: '#fff', border: '1px solid #334c41', borderRadius: '4px', fontSize: '12px' }}
                     />
                     <Legend />
                     <Area
                       type="monotone"
                       dataKey="gross"
                       name="Gross Sales"
-                      stroke="#6366f1"
+                      stroke="#71836A"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorGross)"
@@ -366,7 +366,7 @@ export const AnalyticsPage: React.FC = () => {
                       type="monotone"
                       dataKey="revenue"
                       name="Net Paid Revenue"
-                      stroke="#10b981"
+                      stroke="#285943"
                       strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#colorRevenue)"
@@ -380,10 +380,10 @@ export const AnalyticsPage: React.FC = () => {
           {/* Dual Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Top Products by Revenue */}
-            <Card className="border-slate-200">
+            <Card className="border-[#E5E4DC]">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Package className="w-4 h-4 text-blue-600" />
+                <CardTitle className="text-base flex items-center gap-2 text-[#303631]">
+                  <Package className="w-4 h-4 text-[#285943]" />
                   Top Selling Products by Revenue
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -392,21 +392,21 @@ export const AnalyticsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-4">
                 {topProductsData.length === 0 ? (
-                  <div className="h-64 flex items-center justify-center text-slate-400 text-xs">
+                  <div className="h-64 flex items-center justify-center text-[#777D76] text-xs">
                     No product sales data available for this range
                   </div>
                 ) : (
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={topProductsData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis type="number" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => `₹${val}`} />
-                        <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={10} width={90} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E4DC" />
+                        <XAxis type="number" stroke="#777D76" fontSize={11} tickFormatter={(val) => `₹${val}`} />
+                        <YAxis type="category" dataKey="name" stroke="#777D76" fontSize={10} width={90} />
                         <Tooltip
                           formatter={(val: number) => [`₹${val.toFixed(2)}`, 'Revenue']}
-                          contentStyle={{ backgroundColor: '#0f172a', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                          contentStyle={{ backgroundColor: '#263B32', color: '#fff', border: '1px solid #334c41', borderRadius: '4px', fontSize: '12px' }}
                         />
-                        <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="revenue" name="Revenue" fill="#285943" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -415,10 +415,10 @@ export const AnalyticsPage: React.FC = () => {
             </Card>
 
             {/* Inventory Movements Breakdown Donut */}
-            <Card className="border-slate-200">
+            <Card className="border-[#E5E4DC]">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <PieChartIcon className="w-4 h-4 text-purple-600" />
+                <CardTitle className="text-base flex items-center gap-2 text-[#303631]">
+                  <PieChartIcon className="w-4 h-4 text-[#71836A]" />
                   Inventory Event Distribution
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -427,7 +427,7 @@ export const AnalyticsPage: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-4">
                 {movementBreakdownData.length === 0 ? (
-                  <div className="h-64 flex items-center justify-center text-slate-400 text-xs">
+                  <div className="h-64 flex items-center justify-center text-[#777D76] text-xs">
                     No movement events found
                   </div>
                 ) : (
@@ -451,7 +451,7 @@ export const AnalyticsPage: React.FC = () => {
                         </Pie>
                         <Tooltip
                           formatter={(val: number) => [`${val} events`, 'Volume']}
-                          contentStyle={{ backgroundColor: '#0f172a', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                          contentStyle={{ backgroundColor: '#263B32', color: '#fff', border: '1px solid #334c41', borderRadius: '4px', fontSize: '12px' }}
                         />
                         <Legend />
                       </PieChart>

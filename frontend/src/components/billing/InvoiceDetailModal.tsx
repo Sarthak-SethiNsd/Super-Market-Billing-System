@@ -57,21 +57,21 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
     >
       <div className="printable-receipt relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8 print:m-0 print:border-none print:shadow-none">
         {/* Header (hidden in print) */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 print:hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#334c41] bg-[#263B32] text-white print:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600/10 text-indigo-700 flex items-center justify-center border border-indigo-200">
-              <Receipt className="w-4 h-4" />
+            <div className="w-8 h-8 rounded bg-[#1f3029] border border-[#334c41] flex items-center justify-center text-[#71836A]">
+              <Receipt className="w-4 h-4 text-[#71836A]" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Customer Receipt & Invoice Viewer</h3>
-              <p className="text-xs text-slate-500">Official sales receipt record</p>
+              <h3 className="font-bold text-white text-sm">Historical Invoice Inspector</h3>
+              <p className="text-xs text-[#d6e2dc]">Immutable line-item snapshot from SQLite</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close invoice inspector"
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="text-[#d6e2dc] hover:text-white p-1 rounded hover:bg-[#1f3029] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -108,8 +108,8 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
 
               {/* Line Items Table with Snapshots */}
               <div className="space-y-2">
-                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  Purchased Items ({invoice.items?.length || 0})
+                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Snapshot Line Items ({invoice.items?.length || 0})
                 </div>
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -164,7 +164,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
               </div>
 
               <div className="text-center text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-                Official store receipt. Items may be returned or exchanged within 7 days.
+                Verified against SQLite database. Snapshots remain immutable across product updates.
               </div>
             </div>
           ) : null}
@@ -188,9 +188,9 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
             variant="primary"
             size="sm"
             onClick={onClose}
-            className="bg-slate-900 hover:bg-slate-800 text-white"
+            className="bg-[#285943] hover:bg-[#1e4433] text-white"
           >
-            Close Receipt
+            Close Inspector
           </Button>
         </div>
       </div>

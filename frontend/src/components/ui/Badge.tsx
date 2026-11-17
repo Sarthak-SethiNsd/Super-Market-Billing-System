@@ -12,16 +12,16 @@ export const Badge: React.FC<BadgeProps> = ({
   children,
   ...props
 }) => {
-  const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tracking-wide';
+  const base = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium tracking-wide';
 
   const variants = {
-    default: 'bg-slate-100 text-slate-800 border border-slate-200',
-    success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
-    danger: 'bg-rose-50 text-rose-700 border border-rose-200',
-    outline: 'border border-slate-300 text-slate-700 bg-transparent',
-    staff: 'bg-blue-50 text-blue-700 border border-blue-200',
-    admin: 'bg-purple-50 text-purple-700 border border-purple-200 font-semibold',
+    default: 'bg-[#EFEFEA] text-[#303631] border border-[#E5E4DC]',
+    success: 'bg-[#EEF5F0] text-[#2E6F40] border border-[#C2D9C8]',
+    warning: 'bg-[#FAF3EA] text-[#C87D20] border border-[#F0DDC5]',
+    danger: 'bg-[#F8EFEF] text-[#A63A38] border border-[#ECD1D0]',
+    outline: 'border border-[#E5E4DC] text-[#777D76] bg-transparent',
+    staff: 'bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]',
+    admin: 'bg-[#EFEFEA] text-[#303631] border border-[#D4D3C9] font-semibold',
   };
 
   return (

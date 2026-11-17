@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { Menu, Search, Lock, Unlock, LogOut, ChevronRight, UserCheck } from 'lucide-react';
+import { Menu, Search, Shield, Lock, Unlock, LogOut, ChevronRight, Store } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/Badge';
@@ -12,22 +12,24 @@ interface HeaderProps {
 }
 
 const routeTitles: Record<string, { title: string; category: string }> = {
-  '/': { title: 'Store Operations Overview', category: 'Store Management' },
-  '/billing': { title: 'Point of Sale (POS) Terminal', category: 'Checkout & Sales' },
-  '/transactions': { title: 'Sales Receipts & Transactions', category: 'Checkout & Sales' },
-  '/products': { title: 'Product Catalog & Pricing', category: 'Inventory & Catalog' },
-  '/inventory': { title: 'Stock Control & Audit', category: 'Inventory & Catalog' },
-  '/analytics': { title: 'Sales Performance & Analytics', category: 'Store Management' },
-  '/admin': { title: 'Store Administration & Master Data', category: 'Store Management' },
-  '/oop-concepts': { title: 'System Architecture & Technical Specs', category: 'System Architecture' },
+  '/staff': { title: 'Dashboard Overview', category: 'Analytics & Summary' },
+  '/dashboard': { title: 'Dashboard Overview', category: 'Analytics & Summary' },
+  '/products': { title: 'Product Catalog', category: 'Inventory' },
+  '/billing': { title: 'POS Billing Terminal', category: 'Sales & Checkout' },
+  '/transactions': { title: 'Transaction History', category: 'Sales & Invoices' },
+  '/inventory': { title: 'Inventory Management', category: 'Stock Control' },
+  '/analytics': { title: 'Sales Analytics', category: 'Reports' },
+  '/admin': { title: 'Administrative Settings', category: 'Security & Access' },
+  '/oop-concepts': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
+  '/system-architecture': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
 };
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin, clearAdminSession } = useAuth();
+  const { role, isAdmin, clearAdminSession } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const currentRoute = routeTitles[location.pathname] || { title: 'ApexMart Supermarket', category: 'System' };
+  const currentRoute = routeTitles[location.pathname] || { title: 'Supermarket POS', category: 'System' };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,86 +44,97 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-8 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs print:hidden">
+      <header className="sticky top-0 z-30 flex flex-col lg:flex-row lg:items-center justify-between min-h-16 py-2 px-3 sm:px-4 md:px-8 gap-y-2 bg-white/95 backdrop-blur-xs border-b border-[#E5E4DC] shadow-xs print:hidden">
         {/* Left: Mobile Toggle & Page Title / Breadcrumbs */}
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 w-full lg:w-auto min-w-0 pr-1.5 sm:pr-2">
           <button
             type="button"
             onClick={onOpenMobileSidebar}
-            className="p-2 -ml-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg md:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            className="p-1.5 sm:p-2 -ml-1 text-[#777D76] hover:text-[#303631] hover:bg-[#F7F6F1] rounded md:hidden focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943] shrink-0"
             aria-label="Open navigation sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-              <Link to="/" className="hover:text-slate-900 transition-colors">ApexMart</Link>
-              <ChevronRight className="w-3 h-3 text-slate-400" />
-              <span className="text-slate-400">{currentRoute.category}</span>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-[#777D76] font-medium truncate">
+              <Link to="/staff" className="hover:text-[#303631] transition-colors shrink-0">Supermarket</Link>
+              <ChevronRight className="w-3 h-3 text-[#9BA09A] shrink-0" />
+              <span className="text-[#777D76] truncate">{currentRoute.category}</span>
             </div>
-            <h1 className="text-base md:text-lg font-bold text-slate-900 tracking-tight leading-tight">
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-[#303631] tracking-tight leading-tight truncate">
               {currentRoute.title}
             </h1>
           </div>
         </div>
 
-        {/* Right: Quick Search + Status Indicator + Auth Role Pill */}
-        <div className="flex items-center gap-2 md:gap-4">
+        {/* Right: Customer Website Link + Quick Search + Status Indicator + Auth Role Pill */}
+        <div className="flex flex-wrap items-center justify-between sm:justify-end w-full lg:w-auto gap-1.5 sm:gap-2 md:gap-3">
+          {/* Link to Customer Website */}
+          <Link
+            to="/"
+            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E5E4DC] bg-white text-xs font-medium text-[#303631] hover:text-[#285943] hover:border-[#285943] hover:bg-[#F7F6F1] transition-colors"
+            title="Open customer-facing supermarket website"
+          >
+            <Store className="w-3.5 h-3.5 text-[#285943]" />
+            <span>Customer Website</span>
+          </Link>
+
           {/* Quick Jump to POS Scanner */}
           <button
             type="button"
             onClick={() => navigate('/billing')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-400 text-xs w-56 hover:border-slate-300 hover:bg-slate-200/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 text-left"
-            title="Open POS Terminal & Scan Barcode (Ctrl+K)"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded bg-[#FAF9F5] border border-[#E5E4DC] text-[#777D76] text-xs w-52 hover:border-[#D4D3C9] hover:bg-[#F7F6F1] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943] text-left"
+            title="Open POS Barcode & SKU Scanner (Ctrl+K)"
             aria-label="Open POS barcode and SKU search"
           >
-            <Search className="w-4 h-4 text-slate-400" />
-            <span className="flex-1 text-slate-500">Scan Barcode / SKU...</span>
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-500 shadow-2xs">Ctrl K</kbd>
+            <Search className="w-3.5 h-3.5 text-[#777D76]" />
+            <span className="flex-1 text-[#777D76] truncate">Search SKU, barcode...</span>
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-[#E5E4DC] rounded text-[#777D76]">Ctrl K</kbd>
           </button>
 
-          {/* Backend Connection Health Badge with Latency */}
+          {/* Backend Connection Health Badge */}
           <StatusBadge />
 
-          <div className="h-5 w-px bg-slate-200 hidden sm:block" />
+          <div className="h-5 w-px bg-[#E5E4DC] hidden sm:block" />
 
           {/* Role & Admin Unlock Indicator */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {isAdmin ? (
-              <div className="flex items-center gap-2">
-                <Badge variant="admin" className="gap-1.5 py-1 px-2.5">
-                  <Unlock className="w-3.5 h-3.5 text-purple-600" />
-                  <span className="hidden sm:inline">Store Manager</span>
-                  <span className="sm:hidden">Manager</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Badge variant="admin" className="gap-1 py-1 px-2.5 text-xs">
+                  <Unlock className="w-3.5 h-3.5 text-[#285943]" />
+                  <span className="hidden sm:inline">Admin Mode</span>
+                  <span className="sm:hidden">Admin</span>
                 </Badge>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={clearAdminSession}
-                  className="text-xs text-rose-600 hover:bg-rose-50 hover:border-rose-200 gap-1 px-2.5 py-1"
-                  title="Lock manager privileges & return to cashier mode"
+                  className="text-xs text-[#A63A38] hover:bg-[#F8EFEF] hover:border-[#ECD1D0] gap-1 px-2.5 py-1"
+                  title="Lock admin privileges & return to staff mode"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lock</span>
+                  <span>Lock</span>
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <Badge variant="staff" className="gap-1.5 py-1 px-2.5">
-                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">Cashier Terminal</span>
-                  <span className="sm:hidden">Cashier</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Badge variant="staff" className="gap-1 py-1 px-2.5 text-xs">
+                  <Shield className="w-3.5 h-3.5 text-[#285943]" />
+                  <span className="hidden sm:inline">Staff Mode (POS)</span>
+                  <span className="sm:hidden">{role}</span>
                 </Badge>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowUnlockModal(true)}
-                  className="text-xs text-slate-700 hover:text-slate-900 gap-1 px-2.5 py-1"
-                  title="Unlock store manager administration"
+                  className="text-xs text-[#303631] hover:text-[#285943] hover:border-[#285943] gap-1 px-2.5 py-1 whitespace-nowrap"
+                  title="Unlock administrative control"
                 >
-                  <Lock className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Manager Login</span>
+                  <Lock className="w-3.5 h-3.5 text-[#777D76]" />
+                  <span className="hidden sm:inline">Unlock Admin</span>
+                  <span className="sm:hidden">Unlock</span>
                 </Button>
               </div>
             )}

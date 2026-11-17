@@ -119,10 +119,10 @@ export const ProductsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-600" />
-            Product Catalog & Pricing
+            Product Catalog
           </h2>
-          <p className="text-xs text-slate-500">
-            Store grocery inventory catalog with category filtering, perishable shelf life monitoring, and promotional pricing.
+          <p className="text-sm text-slate-500">
+            Real-time grocery inventory catalog powered by C++ domain models and strategy discounts.
           </p>
         </div>
 
@@ -143,15 +143,13 @@ export const ProductsPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={handleOpenCreate}
-              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <Plus className="w-4 h-4" />
               Add Product
             </Button>
           ) : (
-            <Badge variant="staff" className="text-xs py-1 px-2.5">
-              Cashier Mode (Catalog Read-Only)
-            </Badge>
+            <Badge variant="staff">Staff Mode (Read-Only Catalog)</Badge>
           )}
         </div>
       </div>
@@ -259,7 +257,7 @@ export const ProductsPage: React.FC = () => {
                   <th className="py-3 px-4">Product Details</th>
                   <th className="py-3 px-4">Type & Expiry</th>
                   <th className="py-3 px-4 text-right">Selling Price</th>
-                  <th className="py-3 px-4 text-center">Promotional Discount</th>
+                  <th className="py-3 px-4 text-center">Discount Strategy</th>
                   <th className="py-3 px-4 text-right">Net Price</th>
                   <th className="py-3 px-4 text-center">Stock</th>
                   {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
