@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart,
   Package,
@@ -38,7 +38,9 @@ import { Invoice } from '@/types/billing';
 import { Product } from '@/types/catalog';
 
 export const DashboardPage: React.FC = () => {
-  const { role, isStaff } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { role, isStaff, isLoading: isAuthLoading, logoutStaff } = useAuth();
   const [selectedBillId, setSelectedBillId] = useState<number | null>(null);
 
   // Operational Datasets
@@ -51,7 +53,15 @@ export const DashboardPage: React.FC = () => {
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [chartTimeframe, setChartTimeframe] = useState<'7d' | '30d' | 'all'>('7d');
 
+  // Immediately redirect to Staff Login if unauthenticated
+  useEffect(() => {
+    if (!isAuthLoading && !isStaff) {
+      navigate('/staff/login', { state: { from: location }, replace: true });
+    }
+  }, [isAuthLoading, isStaff, navigate, location]);
+
   const fetchDashboardData = useCallback(async () => {
+    if (!isStaff) return;
     try {
       setIsLoading(true);
       setError(null);
@@ -73,6 +83,12 @@ export const DashboardPage: React.FC = () => {
       setLastRefreshed(new Date());
     } catch (err: unknown) {
       if (err instanceof Error) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes('401') || msg.includes('authentication') || msg.includes('token') || msg.includes('permissions') || msg.includes('unauthorized')) {
+          await logoutStaff();
+          navigate('/staff/login', { state: { from: location, sessionExpired: true }, replace: true });
+          return;
+        }
         setError(err.message);
       } else {
         setError('Failed to fetch dashboard operational data.');
@@ -80,11 +96,13 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isStaff, logoutStaff, navigate, location]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (isStaff) {
+      fetchDashboardData();
+    }
+  }, [isStaff, fetchDashboardData]);
 
   // Current formatted date string
   const currentFormattedDate = useMemo(() => {

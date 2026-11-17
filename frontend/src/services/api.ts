@@ -74,7 +74,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(new Error('Unauthorized or session expired.'));
     }
     if (error.response?.status === 403) {
-      return Promise.reject(new Error('Admin privileges required for this operation.'));
+      return Promise.reject(new Error('Staff privileges required for this operation.'));
     }
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(new Error('Backend connection timed out.'));

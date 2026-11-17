@@ -98,7 +98,7 @@ export const HomePage: React.FC = () => {
             <Link to="/billing" className="hover:text-[#285943] transition-colors">
               Billing &amp; Checkout
             </Link>
-            <Link to="/admin" className="hover:text-[#285943] transition-colors">
+            <Link to="/staff" className="hover:text-[#285943] transition-colors">
               Staff Portal
             </Link>
             <Link to="/oop-concepts" className="hover:text-[#285943] transition-colors">
@@ -228,7 +228,7 @@ export const HomePage: React.FC = () => {
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                to="/dashboard"
+                to="/staff"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded font-bold text-xs bg-[#1f3029] hover:bg-[#192621] text-white border border-[#334c41] transition-colors"
               >
                 <ShieldCheck className="w-4 h-4 text-[#71836A]" />
@@ -369,14 +369,15 @@ export const HomePage: React.FC = () => {
                     </button>
                   </Link>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowUnlockModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#285943] text-white text-xs font-bold hover:bg-[#1e4433] transition-colors"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Staff Login</span>
-                  </button>
+                  <Link to="/staff/login">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#285943] text-white text-xs font-bold hover:bg-[#1e4433] transition-colors"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Staff Login</span>
+                    </button>
+                  </Link>
                 )}
               </div>
             </div>
@@ -419,7 +420,7 @@ export const HomePage: React.FC = () => {
 
             <div className="pt-2 border-t border-[#E5E4DC] flex items-center justify-between text-xs text-[#777D76]">
               <span>Authenticated Staff users receive full access to all inventory, catalog, and reporting tools.</span>
-              <Link to="/admin" className="font-bold text-[#285943] hover:underline flex items-center gap-1">
+              <Link to="/staff" className="font-bold text-[#285943] hover:underline flex items-center gap-1">
                 <span>Staff Portal →</span>
               </Link>
             </div>
@@ -554,7 +555,7 @@ export const HomePage: React.FC = () => {
               <span>•</span>
               <Link to="/billing" className="hover:text-white transition-colors">Billing &amp; Checkout</Link>
               <span>•</span>
-              <Link to="/admin" className="hover:text-white transition-colors">Staff Portal</Link>
+              <Link to="/staff" className="hover:text-white transition-colors">Staff Portal</Link>
               <span>•</span>
               <Link to="/products" className="hover:text-white transition-colors">Products</Link>
               <span>•</span>

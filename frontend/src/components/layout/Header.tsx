@@ -110,7 +110,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={logoutStaff}
+                  onClick={async () => {
+                    await logoutStaff();
+                    navigate('/');
+                  }}
                   className="text-xs text-[#A63A38] hover:bg-[#F8EFEF] hover:border-[#ECD1D0] gap-1 px-2.5 py-1"
                   title="Logout from Staff Mode and return to Customer Mode"
                 >
@@ -128,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowUnlockModal(true)}
+                  onClick={() => navigate('/staff/login')}
                   className="text-xs text-[#303631] hover:text-[#285943] hover:border-[#285943] gap-1 px-2.5 py-1 whitespace-nowrap bg-white font-semibold"
                   title="Authenticate Staff credentials"
                 >

@@ -9,6 +9,8 @@ import { HomePage } from '@/pages/HomePage';
 
 // Internal Operations & System Management Pages
 import { DashboardPage } from '@/pages/DashboardPage';
+import { StaffLoginPage } from '@/pages/StaffLoginPage';
+import { StaffProtectedRoute } from '@/components/auth/StaffProtectedRoute';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { BillingPage } from '@/pages/BillingPage';
 import { TransactionsPage } from '@/pages/TransactionsPage';
@@ -29,14 +31,49 @@ export const App: React.FC = () => {
 
             {/* 2. Internal Staff Mode & Supermarket Operations Application */}
             <Route element={<Layout />}>
-              <Route path="/staff" element={<DashboardPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
+              {/* Dedicated Staff Login Entry Points */}
+              <Route path="/staff/login" element={<StaffLoginPage />} />
+              <Route path="/login" element={<StaffLoginPage />} />
+
+              {/* Protected Staff Operations */}
+              <Route
+                path="/staff"
+                element={
+                  <StaffProtectedRoute>
+                    <DashboardPage />
+                  </StaffProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <StaffProtectedRoute>
+                    <DashboardPage />
+                  </StaffProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <StaffProtectedRoute>
+                    <AdminPage />
+                  </StaffProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <StaffProtectedRoute>
+                    <AnalyticsPage />
+                  </StaffProtectedRoute>
+                }
+              />
+
+              {/* Public Customer & Operational Routes */}
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/products" element={<ProductsPage />} />
               <Route path="/inventory" element={<InventoryPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/admin" element={<AdminPage />} />
               <Route path="/oop-concepts" element={<OopConceptsPage />} />
               <Route path="/system-architecture" element={<OopConceptsPage />} />
             </Route>
