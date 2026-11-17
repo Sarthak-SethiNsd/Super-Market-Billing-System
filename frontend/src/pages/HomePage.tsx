@@ -17,15 +17,21 @@ import {
   X,
   ShieldCheck,
   Lock,
-  Unlock
+  Unlock,
+  Server,
+  Database
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useHealth } from '@/context/HealthContext';
+import { API_BASE_URL } from '@/services/api';
+import { Badge } from '@/components/ui/Badge';
 import { AdminUnlockModal } from '@/components/auth/AdminUnlockModal';
 
 export const HomePage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, role } = useAuth();
+  const { status, healthData } = useHealth();
 
   const adminModules = [
     {
@@ -444,6 +450,88 @@ export const HomePage: React.FC = () => {
             <Code2 className="w-3.5 h-3.5 text-[#285943]" />
             <span>Open C++ Explorer</span>
           </Link>
+        </section>
+
+        {/* System Diagnostics & Architecture Reference (Relocated from Dashboard) */}
+        <section className="bg-white rounded border border-[#E5E4DC] p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-[#E5E4DC] pb-3">
+            <div className="flex items-center gap-2">
+              <Server className="w-4 h-4 text-[#285943]" />
+              <h3 className="text-xs font-bold text-[#303631] uppercase tracking-wider">
+                System Diagnostics &amp; Engine Status
+              </h3>
+            </div>
+            <Badge variant={status === 'connected' ? 'success' : status === 'checking' ? 'warning' : 'danger'}>
+              {status.toUpperCase()}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-[#777D76]">
+            {/* Backend Connectivity */}
+            <div className="p-3 rounded bg-[#FAF9F5] border border-[#E5E4DC] space-y-2">
+              <div className="flex items-center justify-between text-[#303631] font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-[#285943]" />
+                  <span>REST API Engine</span>
+                </span>
+                <span className="font-mono text-[11px] text-[#285943]">{healthData?.version || '1.0.0'}</span>
+              </div>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Implementation:</span>
+                  <span className="font-medium text-[#303631]">C++17 Crow v1.3.4 + Asio</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Endpoint:</span>
+                  <span className="font-mono text-[#303631] truncate ml-1">{API_BASE_URL}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* SQLite Persistence */}
+            <div className="p-3 rounded bg-[#FAF9F5] border border-[#E5E4DC] space-y-2">
+              <div className="flex items-center justify-between text-[#303631] font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-[#71836A]" />
+                  <span>Persistence Layer</span>
+                </span>
+                <span className="font-mono text-[11px] text-[#71836A]">SCHEMA V4</span>
+              </div>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Database:</span>
+                  <span className="font-medium text-[#303631]">SQLite ACID Storage</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Precision:</span>
+                  <span className="font-medium text-[#303631]">Integer Paise (int64_t)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Security & Access Tier */}
+            <div className="p-3 rounded bg-[#FAF9F5] border border-[#E5E4DC] space-y-2">
+              <div className="flex items-center justify-between text-[#303631] font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" />
+                  <span>Security &amp; Auth</span>
+                </span>
+                <Badge variant={isAdmin ? 'admin' : 'staff'} className="text-[10px]">
+                  {role}
+                </Badge>
+              </div>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Password Hash:</span>
+                  <span className="font-medium text-[#303631]">PBKDF2-HMAC-SHA256</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Access Tier:</span>
+                  <span className="font-medium text-[#303631]">{isAdmin ? 'Administrator (Full)' : 'Staff (Checkout)'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
 

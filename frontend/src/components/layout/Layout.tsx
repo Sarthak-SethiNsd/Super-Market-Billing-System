@@ -21,8 +21,8 @@ export const Layout: React.FC = () => {
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden print:block print:overflow-visible">
         <Header onOpenMobileSidebar={() => setMobileOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8 print:p-0 print:overflow-visible">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto px-3 py-3.5 sm:px-4 sm:py-6 md:px-8 md:py-8 print:p-0 print:overflow-visible">
+          <div className="max-w-7xl mx-auto space-y-3.5 sm:space-y-6">
             <Outlet />
           </div>
         </main>
