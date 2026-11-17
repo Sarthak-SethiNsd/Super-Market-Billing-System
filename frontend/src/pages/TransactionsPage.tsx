@@ -70,6 +70,7 @@ export const TransactionsPage: React.FC = () => {
       if (!q) return true;
       return (
         b.billNumber.toLowerCase().includes(q) ||
+        (b.customerName && b.customerName.toLowerCase().includes(q)) ||
         new Date(b.createdAt).toLocaleString().toLowerCase().includes(q)
       );
     })
@@ -265,11 +266,9 @@ export const TransactionsPage: React.FC = () => {
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900 group-hover:text-indigo-600 whitespace-nowrap">
                       <div>{b.billNumber}</div>
-                      {b.customerName && (
-                        <div className="text-[10px] font-sans font-normal text-emerald-700">
-                          {b.customerName}
-                        </div>
-                      )}
+                      <div className="text-[10px] font-sans font-medium text-emerald-800">
+                        {b.customerName || 'Walk-in Customer'}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">

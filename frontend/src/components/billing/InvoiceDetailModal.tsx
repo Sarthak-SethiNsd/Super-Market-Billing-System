@@ -104,12 +104,10 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
                   <span>Invoice: <strong className="text-slate-900">{invoice.billNumber}</strong></span>
                   <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>
                 </div>
-                {invoice.customerName && (
-                  <div className="pt-2 flex items-center justify-between text-xs text-slate-600 border-t border-dashed border-slate-200">
-                    <span>Customer: <strong className="text-slate-900">{invoice.customerName}</strong></span>
-                    {invoice.customerPhone && <span className="font-mono text-[11px]">{invoice.customerPhone}</span>}
-                  </div>
-                )}
+                <div className="pt-2 flex items-center justify-between text-xs text-slate-600 border-t border-dashed border-slate-200">
+                  <span>Customer: <strong className="text-slate-900">{invoice.customerName || 'Walk-in Customer'}</strong></span>
+                  {invoice.customerPhone && <span className="font-mono text-[11px]">{invoice.customerPhone}</span>}
+                </div>
               </div>
 
               {/* Line Items Table with Snapshots */}

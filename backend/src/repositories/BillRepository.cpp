@@ -36,7 +36,7 @@ std::vector<BillItemRecord> BillRepository::getItemsForBill(int billId) {
     return list;
 }
 
-int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId) {
+int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId, const std::string& customerName, const std::string& customerPhone) {
     if (bill.isEmpty()) {
         throw std::invalid_argument("Cannot save an empty bill");
     }
@@ -73,15 +73,23 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
     }
 
     // 2. Lookup customer details for immutable historical snapshot
-    std::string custName = "";
-    std::string custPhone = "";
+    std::string custName = customerName;
+    std::string custPhone = customerPhone;
     if (customerId.has_value()) {
         PreparedStatement custStmt(db, "SELECT full_name, COALESCE(phone, '') FROM customers WHERE id = ?;");
         custStmt.bind(1, *customerId);
         if (custStmt.step()) {
-            custName = custStmt.getString(0);
-            custPhone = custStmt.getString(1);
+            if (custName.empty()) {
+                custName = custStmt.getString(0);
+            }
+            if (custPhone.empty()) {
+                custPhone = custStmt.getString(1);
+            }
         }
+    }
+
+    if (custName.empty()) {
+        custName = "Walk-in Customer";
     }
 
     // 3. Insert into bills table
@@ -95,11 +103,13 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
     billStmt.bind(4, bill.getFinalAmountInPaise());
     if (customerId.has_value()) {
         billStmt.bind(5, *customerId);
-        billStmt.bind(6, custName);
-        billStmt.bind(7, custPhone);
     } else {
         billStmt.bindNull(5);
-        billStmt.bindNull(6);
+    }
+    billStmt.bind(6, custName);
+    if (!custPhone.empty()) {
+        billStmt.bind(7, custPhone);
+    } else {
         billStmt.bindNull(7);
     }
     billStmt.execute();

@@ -58,12 +58,10 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
               <span>Invoice: <strong className="text-[#303631]">{invoice.billNumber}</strong></span>
               <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>
             </div>
-            {invoice.customerName && (
-              <div className="pt-1.5 flex items-center justify-between text-xs text-[#777D76] border-t border-dashed border-[#E5E4DC]">
-                <span>Customer: <strong className="text-[#303631]">{invoice.customerName}</strong></span>
-                {invoice.customerPhone && <span className="font-mono text-[11px]">{invoice.customerPhone}</span>}
-              </div>
-            )}
+            <div className="pt-1.5 flex items-center justify-between text-xs text-[#777D76] border-t border-dashed border-[#E5E4DC]">
+              <span>Customer: <strong className="text-[#303631]">{invoice.customerName || 'Walk-in Customer'}</strong></span>
+              {invoice.customerPhone && <span className="font-mono text-[11px]">{invoice.customerPhone}</span>}
+            </div>
           </div>
 
           {/* Line Items Table */}

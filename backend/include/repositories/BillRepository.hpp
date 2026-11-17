@@ -79,7 +79,7 @@ private:
 public:
     explicit BillRepository(DatabaseConnection& conn) : db(conn) {}
 
-    int saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId = std::nullopt);
+    int saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId = std::nullopt, const std::string& customerName = "", const std::string& customerPhone = "");
     std::optional<BillRecord> findById(int id);
     std::optional<BillRecord> findByBillNumber(const std::string& billNumber);
     std::vector<BillRecord> getRecentBills(int limit = 50, int offset = 0);

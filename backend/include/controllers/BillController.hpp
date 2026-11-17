@@ -65,7 +65,7 @@ public:
             {"finalAmountInRupees", b.getFinalAmountInRupees()},
             {"createdAt", b.createdAt},
             {"customerId", b.customerId.has_value() ? nlohmann::json(*b.customerId) : nlohmann::json(nullptr)},
-            {"customerName", b.customerName},
+            {"customerName", b.customerName.empty() ? "Walk-in Customer" : b.customerName},
             {"customerPhone", b.customerPhone},
             {"itemCount", b.items.size()},
             {"items", itemsArr}
@@ -221,7 +221,7 @@ public:
                             domainBill.addItem(*product, quantity);
                         }
 
-                        // Parse optional customer ID
+                        // Parse optional customer details
                         std::optional<int> customerId = std::nullopt;
                         if (body.contains("customerId") && !body["customerId"].is_null()) {
                             if (body["customerId"].is_number_integer()) {
@@ -229,8 +229,24 @@ public:
                             }
                         }
 
+                        std::string customerName;
+                        if (body.contains("customerName") && !body["customerName"].is_null() && body["customerName"].is_string()) {
+                            customerName = ControllerUtils::trimCopy(body["customerName"].get<std::string>());
+                            if (customerName.size() > 100) {
+                                customerName = customerName.substr(0, 100);
+                            }
+                        }
+
+                        std::string customerPhone;
+                        if (body.contains("customerPhone") && !body["customerPhone"].is_null() && body["customerPhone"].is_string()) {
+                            customerPhone = ControllerUtils::trimCopy(body["customerPhone"].get<std::string>());
+                            if (customerPhone.size() > 20) {
+                                customerPhone = customerPhone.substr(0, 20);
+                            }
+                        }
+
                         // Save Bill atomically to SQLite with stock deduction & snapshots
-                        int newBillId = billRepo.saveBill(billNumber, domainBill, customerId);
+                        int newBillId = billRepo.saveBill(billNumber, domainBill, customerId, customerName, customerPhone);
 
                         auto createdRecord = billRepo.findById(newBillId);
                         if (!createdRecord.has_value()) {
