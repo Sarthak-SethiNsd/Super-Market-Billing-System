@@ -15,7 +15,7 @@ import {
   ArrowRight,
   Menu,
   X,
-  Cpu,
+  ShieldCheck,
   Lock,
   Unlock
 } from 'lucide-react';
@@ -202,8 +202,8 @@ export const HomePage: React.FC = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-2 max-w-3xl">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#1f3029] border border-[#334c41] text-[#d6e2dc] text-xs font-semibold">
-                <Cpu className="w-3.5 h-3.5 text-[#71836A]" />
-                <span>C++17 Crow Core • Transactional SQLite Engine</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-[#71836A]" />
+                <span>Supermart Online Platform • Real-Time Operations</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
                 Supermarket Billing &amp; Inventory Management Platform
@@ -237,29 +237,29 @@ export const HomePage: React.FC = () => {
             <div className="flex items-center gap-2 text-xs">
               <CheckCircle2 className="w-4 h-4 text-[#71836A] shrink-0" />
               <div>
-                <span className="font-bold text-white block">Integer Currency</span>
-                <span className="text-[11px] text-[#9cb5a8]">Exact int64_t Paise</span>
+                <span className="font-bold text-white block">Accurate Billing</span>
+                <span className="text-[11px] text-[#9cb5a8]">Precise Decimal-Free Totals</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <CheckCircle2 className="w-4 h-4 text-[#71836A] shrink-0" />
               <div>
-                <span className="font-bold text-white block">Atomic Stock Sync</span>
-                <span className="text-[11px] text-[#9cb5a8]">ACID SQLite Transactions</span>
+                <span className="font-bold text-white block">Automatic Stock Updates</span>
+                <span className="text-[11px] text-[#9cb5a8]">Real-Time Inventory Sync</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <CheckCircle2 className="w-4 h-4 text-[#71836A] shrink-0" />
               <div>
-                <span className="font-bold text-white block">Role-Based Access</span>
-                <span className="text-[11px] text-[#9cb5a8]">Staff &amp; Admin Modes</span>
+                <span className="font-bold text-white block">Secure Staff Access</span>
+                <span className="text-[11px] text-[#9cb5a8]">Protected Management Tools</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <CheckCircle2 className="w-4 h-4 text-[#71836A] shrink-0" />
               <div>
-                <span className="font-bold text-white block">Strategy Discounts</span>
-                <span className="text-[11px] text-[#9cb5a8]">Polymorphic Rules</span>
+                <span className="font-bold text-white block">Flexible Discounts</span>
+                <span className="text-[11px] text-[#9cb5a8]">Percentage &amp; Flat Savings</span>
               </div>
             </div>
           </div>
@@ -274,7 +274,7 @@ export const HomePage: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]">
-                  Section A • Front Counter
+                  Section A • Online Checkout
                 </span>
                 <span className="text-xs text-[#2E6F40] font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Checkout

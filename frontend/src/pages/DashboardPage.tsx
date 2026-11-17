@@ -20,7 +20,6 @@ import {
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
-  Cpu,
   Lock,
   Unlock,
   CheckCircle2
@@ -71,11 +70,11 @@ export const DashboardPage: React.FC = () => {
         <div className="relative z-10 max-w-3xl space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded bg-[#1f3029] text-[#d6e2dc] text-xs font-semibold border border-[#334c41] w-fit max-w-full">
             <div className="flex items-center gap-1.5 shrink-0">
-              <Cpu className="w-3.5 h-3.5 text-[#71836A]" />
+              <ShieldCheck className="w-3.5 h-3.5 text-[#71836A]" />
               <span>Supermart Online Platform</span>
             </div>
             <span className="text-[#71836A] hidden sm:inline">•</span>
-            <div className="text-[#b4c7be]">C++17 Crow + SQLite Backend Engine</div>
+            <div className="text-[#b4c7be]">Real-Time Supermarket Management</div>
           </div>
 
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-white">
@@ -83,7 +82,7 @@ export const DashboardPage: React.FC = () => {
           </h1>
 
           <p className="text-[#b4c7be] text-sm md:text-base leading-relaxed">
-            Welcome to the management workstation. The application operates in <strong className="text-white">{role} Mode</strong>. All financial transactions calculate prices and discounts in exact integer paise via the C++ domain engine.
+            Welcome to the management workstation. The application operates in <strong className="text-white">{role} Mode</strong>. All financial transactions calculate prices and discounts with real-time stock reconciliation.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -208,7 +207,7 @@ export const DashboardPage: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]">
-                Primary Operation
+                Section A • Online Checkout
               </span>
               <span className="text-xs text-[#2E6F40] font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Checkout
