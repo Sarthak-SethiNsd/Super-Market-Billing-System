@@ -2,23 +2,44 @@
 
 A modern, enterprise-grade **Supermarket Billing & Inventory Management System** built for a college Object-Oriented Programming (OOP) curriculum in C++.
 
-The project couples a high-performance **C++17 / Crow REST API** microservice and an embedded **SQLite3** persistence layer with a responsive **React 19 + TypeScript + Vite** frontend. It features a strict architectural separation between a **public customer-facing corporate website** and an authenticated **internal staff supermarket management application**.
+The project couples a high-performance **C++17 / Crow REST API** microservice and an embedded **SQLite3** persistence layer with a responsive **React 19 + TypeScript + Vite** frontend. It features a strict architectural separation between an unauthenticated **Customer Mode** (public corporate site, product discovery, self-service cart, and checkout) and an authenticated **Staff Mode** (complete operational management portal with KPI analytics, inventory adjustments, and catalog CRUD). There is **no separate Admin operating mode**.
 
 > [!NOTE]
 > The original academic console submission file at `../Supermarket_billing_System/1.cpp` has been preserved completely unmodified.
 
 ---
 
+## Operating Modes (Exactly Two Modes)
+
+The system enforces a clean, two-mode operating model:
+
+1. **CUSTOMER MODE (Public):**
+   - Public customer-facing corporate showcase and catalog browsing (`/`).
+   - Real-time product search with shelf prices, department categories, and promotional discounts.
+   - Point-of-Sale (POS) shopping cart assembly with client-side stock availability limits.
+   - Self-service atomic checkout (`POST /api/bills`) with instant 80mm thermal receipt generation.
+   - *Restricted:* Customer Mode has zero access to internal sales analytics, stock adjustment tools, product CRUD, or staff credential management.
+
+2. **STAFF MODE (Password-Authenticated):**
+   - Password-protected management access (`POST /api/auth/staff/login`) secured via PBKDF2-HMAC-SHA256.
+   - Full operational dashboard (`/dashboard`) featuring 5 KPI summary cards (Today's Sales, Today's Bills, Total Products, Low Stock Alerts, Out of Stock Count).
+   - Real-time sales trend graphs and recent transaction feeds.
+   - Product catalog management (Add, Edit, Deactivate products).
+   - Inventory management (`/inventory`) with manual stock additions, write-offs, and an immutable audit ledger (`inventory_movements`).
+   - Category and brand taxonomy management (`category_brands` junction table).
+   - Complete historical billing audit register (`/transactions`).
+
+---
+
 ## Key Features
 
-- **Public Corporate Website (`/`):** Professional customer-facing landing page featuring brand values, department showcases, store facilities, customer commitments, and store contact placeholders.
-- **Cashier POS Billing Terminal (`/billing`):** Fast, keyboard-friendly Point-of-Sale interface with instant reactive product search, live stock guards, and polymorphic discount calculations.
-- **Atomic Checkout & Decrement:** Multi-item purchases and stock deductions execute within ACID-compliant database transactions (`Transaction` RAII class) to prevent overselling.
-- **Integer Currency Representation:** All financial calculations strictly utilize signed 64-bit integer paise (`int64_t`), eliminating floating-point rounding drift.
-- **Immutable Historical Invoices:** Sales transactions snapshot line item names, brands, unit prices, discounts, and line totals at the exact moment of checkout.
-- **Audit Movement Ledger (`/inventory`):** Complete append-only audit trail logging stock additions, reductions, write-offs, and checkout sales.
-- **Role-Based Access Control (RBAC):** Clean two-mode operational architecture separating unauthenticated **Customer Mode** (product discovery, catalog browsing, and self-checkout) from password-protected **Staff Mode** (full operational dashboard, inventory management, product CRUD, and sales analytics).
+- **Decoupled Client-Server Architecture:** High-speed C++17 Crow REST microservice communicating over JSON with a React 19 Single-Page Application.
+- **Integer Currency Representation:** All financial calculations strictly utilize signed 64-bit integer paise (`int64_t`, $1\text{ INR} = 100\text{ paise}$), eliminating floating-point rounding drift.
+- **Atomic Checkout & ACID Transactions:** Multi-item purchases, stock decrements, and inventory movement logs execute inside atomic database transactions (`Transaction` RAII class).
+- **Immutable Historical Invoices:** Sales transactions snapshot line item names, brands, unit prices, discounts, and line totals at the exact second of checkout (`bill_items`).
+- **Audit Movement Ledger (`/inventory`):** Append-only audit trail logging stock additions, write-offs, physical adjustments, and checkout sales.
 - **PBKDF2-HMAC-SHA256 Cryptography:** Secure password hashing (100,000 iterations, 128-bit random salt) via Windows CNG on Windows and OpenSSL 3.x on Linux.
+- **Polymorphic Discount Strategies:** Strategy Design Pattern implementing `NoDiscount`, `PercentageDiscount`, and `FixedDiscount` algorithms without modifying product definitions.
 - **Interactive OOP Concepts Explorer (`/oop-concepts`):** Academic demonstration module with interactive class hierarchy diagrams, live discount strategy simulator, and object slicing demo.
 
 ---
@@ -59,17 +80,19 @@ Supermarket_Management_System/
 │   ├── package.json & lock        # Pinned React dependencies
 │   ├── vite.config.ts             # Strict-port Vite configuration
 │   └── src/                       # React components, pages, context, and services
-├── docs/                          # Comprehensive technical documentation
-│   ├── PROJECT_OVERVIEW.md        # Problem statement, scope, and objectives
+├── docs/                          # Comprehensive academic submission documentation
+│   ├── PROJECT_REPORT.md          # Complete formal academic project report
+│   ├── SYSTEM_ARCHITECTURE.md     # Architecture diagrams, layers & request flows
+│   ├── DATABASE_DESIGN.md         # SQLite schema, ER diagram, migrations & transactions
+│   ├── API_DOCUMENTATION.md       # Crow REST API endpoints reference & examples
+│   ├── OOP_CONCEPTS.md            # C++17 OOP concepts mapped to real source files
+│   ├── USER_MANUAL.md             # End-to-end user manual (Customer & Staff modes)
+│   ├── INSTALLATION_AND_DEPLOYMENT.md # Setup, build, test, Docker & cloud deployment
+│   ├── TESTING_REPORT.md          # 34 CTest test cases, results & verification
+│   ├── VIVA_PREPARATION.md        # 40 viva questions, 10 design decisions & pitch
+│   ├── PROJECT_OVERVIEW.md        # Problem statement, retail motivation, and objectives
 │   ├── FEATURES_AND_MODULES.md    # Detailed module breakdown
-│   ├── ARCHITECTURE.md            # Architecture diagrams and request lifecycles
-│   ├── OOP_CONCEPTS.md            # Academic OOP concepts mapped to source files
-│   ├── DATABASE_SCHEMA.md         # Schema definitions, ER diagrams, and storage guide
-│   ├── API_REFERENCE.md           # Crow REST API endpoints reference
-│   ├── SETUP_AND_CONFIGURATION.md # Compilation and configuration guide
 │   ├── DEMO_GUIDE.md              # Evaluator live demonstration script
-│   ├── DEPLOYMENT.md              # Docker build and cloud hosting guide
-│   ├── TESTING_AND_VERIFICATION.md# Test suite coverage and E2E results
 │   └── TROUBLESHOOTING.md         # Resolving common operational issues
 └── scripts/
     └── seed_demo_data.py          # Standalone fallback Python seeder
@@ -130,23 +153,21 @@ ctest --test-dir build -C Release --output-on-failure
 | **InventorySuite** | `tests/test_inventory.cpp` | Stock decrement, negative stock prevention, nested StockInfo | **5 / 5 PASS** |
 | **BillingSuite** | `tests/test_billing.cpp` | Bill calculations, operator overloading, diamond inheritance | **6 / 6 PASS** |
 | **DatabaseSuite** | `tests/test_database.cpp` | SQLite persistence, repository CRUD, transaction rollbacks | **6 / 6 PASS** |
-| **ApiSuite** | `tests/test_api.cpp` | Health, Crow REST routes, RBAC guards, PBKDF2 cryptography | **12 / 12 PASS** |
+| **ApiSuite** | `tests/test_api.cpp` | Health, Crow REST routes, Staff RBAC guards, PBKDF2 cryptography | **12 / 12 PASS** |
 | **Total Test Coverage** | | | **34 / 34 (100% PASS)** |
 
 ---
 
-## Documentation Navigation
+## Complete College Submission Documentation
 
-Detailed documentation is available in the [`docs/`](./docs/) directory:
+Comprehensive submission documentation is authored and verified in the [`docs/`](./docs/) directory:
 
-- 📋 [**Project Overview**](./docs/PROJECT_OVERVIEW.md) — Problem statement, retail motivation, and objectives.
-- 📦 [**Features & Modules**](./docs/FEATURES_AND_MODULES.md) — Public portal, POS, inventory, analytics, and admin tools.
-- 🏛️ [**System Architecture**](./docs/ARCHITECTURE.md) — Decoupled layers, sequence diagrams, and concurrency design.
-- 🎓 [**OOP Concepts Implementation**](./docs/OOP_CONCEPTS.md) — Inheritance, polymorphism, RAII, templates, operator overloading, and design patterns.
-- 🗄️ [**Database Schema & Storage**](./docs/DATABASE_SCHEMA.md) — Tables, foreign keys, paise currency invariant, and WAL mode.
-- 🌐 [**REST API Reference**](./docs/API_REFERENCE.md) — Crow HTTP routes, request/response DTOs, and status codes.
-- ⚙️ [**Setup & Configuration**](./docs/SETUP_AND_CONFIGURATION.md) — Toolchain prerequisites and environment variables.
-- 🚀 [**Demonstration Guide**](./docs/DEMO_GUIDE.md) — Step-by-step evaluator script for live demonstration.
-- 🐳 [**Deployment Guide**](./docs/DEPLOYMENT.md) — Docker containerization, OpenSSL, and cloud hosting constraints.
-- 🧪 [**Testing & Verification**](./docs/TESTING_AND_VERIFICATION.md) — Automated CTest suites and manual E2E workflows.
-- 🔧 [**Troubleshooting Guide**](./docs/TROUBLESHOOTING.md) — Resolving port collisions, database path, and CORS issues.
+1. 📄 [**Formal Project Report (`PROJECT_REPORT.md`)**](./docs/PROJECT_REPORT.md) — Complete academic project report with abstract, problem statement, requirements, architecture, results, limitations, and future scope.
+2. 🏛️ [**System Architecture (`SYSTEM_ARCHITECTURE.md`)**](./docs/SYSTEM_ARCHITECTURE.md) — Multi-tier topology, Mermaid architecture sequence diagrams, domain layer design, and concurrency model.
+3. 🗄️ [**Database Design & Schema (`DATABASE_DESIGN.md`)**](./docs/DATABASE_DESIGN.md) — 10 SQLite table schemas, Mermaid ER diagram, indexes, foreign keys, migrations, and ACID transaction safety.
+4. 🌐 [**REST API Documentation (`API_DOCUMENTATION.md`)**](./docs/API_DOCUMENTATION.md) — Complete endpoint reference, HTTP methods, request/response JSON payloads, and Customer vs. Staff access matrix.
+5. 🎓 [**OOP Concepts Implementation Guide (`OOP_CONCEPTS.md`)**](./docs/OOP_CONCEPTS.md) — Detailed mapping of C++17 OOP principles (Encapsulation, Polymorphism, Virtual Inheritance, Strategy Pattern, Templates, RAII) to source files.
+6. 📖 [**User Manual (`USER_MANUAL.md`)**](./docs/USER_MANUAL.md) — Comprehensive guide to Customer Mode shopping, Staff Mode authentication, dashboard analytics, inventory management, and POS billing.
+7. ⚙️ [**Installation & Deployment Guide (`INSTALLATION_AND_DEPLOYMENT.md`)**](./docs/INSTALLATION_AND_DEPLOYMENT.md) — Toolchain prerequisites, Windows build, Docker multi-stage build, and cloud hosting guidelines.
+8. 🧪 [**Testing & Verification Report (`TESTING_REPORT.md`)**](./docs/TESTING_REPORT.md) — Detailed breakdown of 34 CTest test cases across 5 suites, test coverage, and frontend verification.
+9. 🎯 [**Viva Preparation & Defense Guide (`VIVA_PREPARATION.md`)**](./docs/VIVA_PREPARATION.md) — 40 likely viva examination questions with source-mapped answers, 10 architectural decisions defended, and a 2–3 minute elevator pitch.

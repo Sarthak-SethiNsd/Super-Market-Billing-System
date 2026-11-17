@@ -24,16 +24,18 @@ All technical documentation files are authored, verified against the actual code
 | **Project Readme** | `README.md` | Complete | Project overview, tech stack, quick start, and documentation navigation. |
 | **Evaluator Start Guide** | `START_HERE.md` | Complete | Fast-track evaluator setup and verification walkthrough. |
 | **Submission Checklist** | `PROJECT_SUBMISSION_CHECKLIST.md` | Complete | This verification document. |
+| **Formal Project Report** | `docs/PROJECT_REPORT.md` | Complete | Academic report with abstract, requirements, architecture, results, and limitations. |
+| **System Architecture** | `docs/SYSTEM_ARCHITECTURE.md` | Complete | Multi-tier topology, Mermaid sequence diagrams, and concurrency design. |
+| **Database Design** | `docs/DATABASE_DESIGN.md` | Complete | 10 SQLite table schemas, ER diagram, migrations, transactions, and snapshots. |
+| **REST API Documentation** | `docs/API_DOCUMENTATION.md` | Complete | Crow REST endpoints, request/response DTOs, and role-based access. |
+| **OOP Concepts Guide** | `docs/OOP_CONCEPTS.md` | Complete | Detailed C++17 OOP concepts (vtable, RAII, strategy pattern, templates, diamond problem). |
+| **User Manual** | `docs/USER_MANUAL.md` | Complete | Step-by-step user manual for Customer Mode shopping and Staff Mode management. |
+| **Installation & Deployment** | `docs/INSTALLATION_AND_DEPLOYMENT.md` | Complete | Local setup, CTest verification, Docker containerization, and Render deployment. |
+| **Testing Report** | `docs/TESTING_REPORT.md` | Complete | 34 CTest test cases across 5 suites, test coverage, and build verification. |
+| **Viva Defense Guide** | `docs/VIVA_PREPARATION.md` | Complete | 40 source-mapped viva questions, 10 architectural decisions defended, and elevator pitch. |
 | **Project Overview** | `docs/PROJECT_OVERVIEW.md` | Complete | Retail problem statement, project scope, and user roles. |
 | **Features & Modules** | `docs/FEATURES_AND_MODULES.md` | Complete | Specifications for Public Site, POS, Catalog, Inventory, and Analytics. |
-| **System Architecture** | `docs/ARCHITECTURE.md` | Complete | Topology, request lifecycles, and Mermaid sequence diagrams. |
-| **OOP Concepts Guide** | `docs/OOP_CONCEPTS.md` | Complete | Mapping of OOP mechanisms (Inheritance, Polymorphism, RAII, Templates) to C++ code. |
-| **Database Schema** | `docs/DATABASE_SCHEMA.md` | Complete | SQLite table definitions, foreign keys, paise currency invariant, and backups. |
-| **REST API Reference** | `docs/API_REFERENCE.md` | Complete | Crow HTTP endpoints, request/response DTOs, and status codes. |
-| **Setup & Configuration** | `docs/SETUP_AND_CONFIGURATION.md` | Complete | Build toolchain requirements and environment variables. |
 | **Demo Guide** | `docs/DEMO_GUIDE.md` | Complete | Step-by-step evaluation script for live demonstration. |
-| **Deployment Guide** | `docs/DEPLOYMENT.md` | Complete | Docker build, OpenSSL support, and cloud hosting constraints. |
-| **Testing & Verification** | `docs/TESTING_AND_VERIFICATION.md` | Complete | CTest test suites, coverage summary, and manual verification results. |
 | **Troubleshooting Guide** | `docs/TROUBLESHOOTING.md` | Complete | Operational resolution for port collisions and configuration errors. |
 
 ---
