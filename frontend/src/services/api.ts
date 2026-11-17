@@ -53,7 +53,7 @@ export const resetApiBaseUrl = (): string => {
 // Request interceptor: attach bearer token if present
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('sms_admin_token');
+    const token = localStorage.getItem('sms_staff_token') || localStorage.getItem('sms_admin_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

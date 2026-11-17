@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { Menu, Search, Shield, Lock, Unlock, LogOut, ChevronRight, Store } from 'lucide-react';
+import { Menu, Search, ShieldCheck, Lock, LogOut, ChevronRight, Store } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/Badge';
@@ -19,7 +19,7 @@ const routeTitles: Record<string, { title: string; category: string }> = {
   '/transactions': { title: 'Transactions & Sales History', category: 'Sales & Invoices' },
   '/inventory': { title: 'Inventory Management', category: 'Stock Control' },
   '/analytics': { title: 'Sales Analytics', category: 'Reports' },
-  '/admin': { title: 'Admin Panel & Staff Management', category: 'Administration' },
+  '/admin': { title: 'Staff & System Management', category: 'Administration' },
   '/oop-concepts': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
   '/system-architecture': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
 };
@@ -27,7 +27,7 @@ const routeTitles: Record<string, { title: string; category: string }> = {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { role, isAdmin, clearAdminSession } = useAuth();
+  const { isStaff, logoutStaff } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const currentRoute = routeTitles[location.pathname] || { title: 'Supermart Management', category: 'System' };
 
@@ -98,43 +98,43 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
 
           <div className="h-5 w-px bg-[#E5E4DC] hidden sm:block" />
 
-          {/* Role & Admin Unlock Indicator */}
+          {/* Role & Staff Mode Authentication Indicator */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {isAdmin ? (
+            {isStaff ? (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <Badge variant="admin" className="gap-1 py-1 px-2.5 text-xs">
-                  <Unlock className="w-3.5 h-3.5 text-[#285943]" />
-                  <span className="hidden sm:inline">Admin Mode</span>
-                  <span className="sm:hidden">Admin</span>
+                <Badge variant="staff" className="gap-1 py-1 px-2.5 text-xs bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" />
+                  <span className="hidden sm:inline">Staff Mode</span>
+                  <span className="sm:hidden">Staff</span>
                 </Badge>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={clearAdminSession}
+                  onClick={logoutStaff}
                   className="text-xs text-[#A63A38] hover:bg-[#F8EFEF] hover:border-[#ECD1D0] gap-1 px-2.5 py-1"
-                  title="Lock admin privileges & return to staff mode"
+                  title="Logout from Staff Mode and return to Customer Mode"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Lock</span>
+                  <span>Exit Staff</span>
                 </Button>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <Badge variant="staff" className="gap-1 py-1 px-2.5 text-xs">
-                  <Shield className="w-3.5 h-3.5 text-[#285943]" />
-                  <span className="hidden sm:inline">Staff Mode</span>
-                  <span className="sm:hidden">{role}</span>
+                <Badge variant="default" className="gap-1 py-1 px-2.5 text-xs bg-[#FAF9F5] text-[#777D76] border border-[#E5E4DC]">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="hidden sm:inline">Customer Mode</span>
+                  <span className="sm:hidden">Customer</span>
                 </Badge>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowUnlockModal(true)}
-                  className="text-xs text-[#303631] hover:text-[#285943] hover:border-[#285943] gap-1 px-2.5 py-1 whitespace-nowrap"
-                  title="Unlock administrative control"
+                  className="text-xs text-[#303631] hover:text-[#285943] hover:border-[#285943] gap-1 px-2.5 py-1 whitespace-nowrap bg-white font-semibold"
+                  title="Authenticate Staff credentials"
                 >
-                  <Lock className="w-3.5 h-3.5 text-[#777D76]" />
-                  <span className="hidden sm:inline">Unlock Admin</span>
-                  <span className="sm:hidden">Unlock</span>
+                  <Lock className="w-3.5 h-3.5 text-[#285943]" />
+                  <span className="hidden sm:inline">Staff Login</span>
+                  <span className="sm:hidden">Staff</span>
                 </Button>
               </div>
             )}
@@ -142,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
         </div>
       </header>
 
-      {/* Admin Unlock Modal */}
+      {/* Staff Login Modal */}
       <AdminUnlockModal
         isOpen={showUnlockModal}
         onClose={() => setShowUnlockModal(false)}

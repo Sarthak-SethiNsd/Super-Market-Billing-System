@@ -72,12 +72,17 @@ public:
         };
     }
 
-    static void registerRoutes(ControllerUtils::CrowApp& app, DatabaseConnection& db, const std::string& allowedOrigin) {
-        // GET /api/bills/summary (Must be before /api/bills/<int>)
+    static void registerRoutes(ControllerUtils::CrowApp& app, DatabaseConnection& db, class AuthService& auth, const std::string& allowedOrigin) {
+        // GET /api/bills/summary (Internal Sales Analytics - Staff Only)
         CROW_ROUTE(app, "/api/bills/summary").methods("GET"_method, "OPTIONS"_method)(
-            [&db, allowedOrigin](const crow::request& req) {
+            [&db, &auth, allowedOrigin](const crow::request& req) {
                 if (req.method == "OPTIONS"_method) {
                     return ControllerUtils::corsPreflight(allowedOrigin);
+                }
+
+                crow::response err;
+                if (!ControllerUtils::requireStaff(req, auth, allowedOrigin, err)) {
+                    return err;
                 }
 
                 BillRepository billRepo(db);
@@ -98,17 +103,22 @@ public:
             }
         );
 
-        // POST /api/bills & GET /api/bills
+        // POST /api/bills (Checkout - Customer & Staff) & GET /api/bills (Sales Ledger - Staff Only)
         CROW_ROUTE(app, "/api/bills").methods("GET"_method, "POST"_method, "OPTIONS"_method)(
-            [&db, allowedOrigin](const crow::request& req) {
+            [&db, &auth, allowedOrigin](const crow::request& req) {
                 if (req.method == "OPTIONS"_method) {
                     return ControllerUtils::corsPreflight(allowedOrigin);
                 }
 
                 BillRepository billRepo(db);
 
-                // 1. GET /api/bills
+                // 1. GET /api/bills (Staff Only)
                 if (req.method == "GET"_method) {
+                    crow::response err;
+                    if (!ControllerUtils::requireStaff(req, auth, allowedOrigin, err)) {
+                        return err;
+                    }
+
                     int limit = 50;
                     int offset = 0;
                     if (req.url_params.get("limit")) {

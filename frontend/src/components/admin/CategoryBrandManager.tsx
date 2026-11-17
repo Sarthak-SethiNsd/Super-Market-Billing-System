@@ -9,7 +9,7 @@ import { brandService } from '@/services/brandService';
 import { useAuth } from '@/context/AuthContext';
 
 export const CategoryBrandManager: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -235,7 +235,7 @@ export const CategoryBrandManager: React.FC = () => {
                     >
                       <Tag className="w-3 h-3 text-emerald-600" />
                       <span className="font-semibold text-slate-800">{b.name}</span>
-                      {isAdmin && (
+                      {isStaff && (
                         <button
                           type="button"
                           onClick={() => handleDissociate(b.id, b.name)}
@@ -252,8 +252,8 @@ export const CategoryBrandManager: React.FC = () => {
               )}
             </div>
 
-            {/* Admin Association Controls */}
-            {isAdmin && (
+            {/* Staff Association Controls */}
+            {isStaff && (
               <div className="pt-3 border-t border-slate-200 space-y-3">
                 <p className="text-xs font-semibold text-slate-800">Add Brand Association:</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

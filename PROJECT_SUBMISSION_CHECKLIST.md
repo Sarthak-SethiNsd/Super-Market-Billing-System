@@ -73,7 +73,7 @@ Run from `Supermarket_Management_System/`:
   - Perishable products with ISO future expiry dates.
   - Low-stock alert demonstration item (`Fresh Organic Baby Spinach Palak 250g`, stock = 3 $\le 5$).
 - [x] **Seeder Idempotency:** Both `supermarket_seeder.exe` and `python scripts/seed_demo_data.py` safely detect existing records on repeated runs (0 inserted, 25 skipped).
-- [x] **Pre-Seeded Administrator:** `admin` / `admin123` available for evaluation.
+- [x] **Pre-Seeded Staff Account:** `admin123` available for evaluation.
 
 ---
 
@@ -88,6 +88,6 @@ Launch via `.\start-app.ps1`:
 - [x] **Printable Thermal Receipt:** Immediate invoice modal isolates receipt layout for 80mm thermal printing (`@media print`).
 - [x] **Stock Movement Ledger (`/inventory`):** Audit table reflects historical sales and manual intake adjustments.
 - [x] **Sales Analytics (`/analytics`):** Real-time revenue, transaction volume, and category distribution charts update accurately.
-- [x] **Admin Unlock Modal:** Enforces PBKDF2 password authentication and grants privileged access.
+- [x] **Staff Login Modal:** Enforces PBKDF2 password authentication and grants full operational management access.
 - [x] **OOP Concepts Explorer (`/oop-concepts`):** Interactive visualizer displays C++ class hierarchies, dynamic dispatch simulator, and object slicing demonstrations.
 - [x] **Restart & Persistence:** Stopping and restarting the server preserves all completed transactions and decremented stock levels in SQLite.

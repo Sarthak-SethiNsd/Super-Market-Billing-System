@@ -10,7 +10,7 @@ import { brandService } from '@/services/brandService';
 import { useAuth } from '@/context/AuthContext';
 
 export const BrandManager: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -136,7 +136,7 @@ export const BrandManager: React.FC = () => {
               <CardDescription className="text-xs">Product manufacturers and suppliers</CardDescription>
             </div>
           </div>
-          {isAdmin ? (
+          {isStaff ? (
             <Button
               variant="primary"
               size="sm"
@@ -147,7 +147,7 @@ export const BrandManager: React.FC = () => {
               Add Brand
             </Button>
           ) : (
-            <Badge variant="staff">Read-Only (Staff)</Badge>
+            <Badge variant="default">Customer Mode</Badge>
           )}
         </div>
 
@@ -211,7 +211,7 @@ export const BrandManager: React.FC = () => {
                   </div>
                 </div>
 
-                {isAdmin && (
+                {isStaff && (
                   <div className="flex items-center gap-1 shrink-0 ml-3">
                     <button
                       onClick={() => openEditModal(b)}

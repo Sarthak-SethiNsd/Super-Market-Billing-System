@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -10,11 +10,9 @@ import { CategoryBrandManager } from '@/components/admin/CategoryBrandManager';
 import { CustomerManager } from '@/components/admin/CustomerManager';
 import { AdminUnlockModal } from '@/components/auth/AdminUnlockModal';
 import {
-  ShieldAlert,
   ShieldCheck,
   Key,
   Lock,
-  Unlock,
   LogOut,
   CheckCircle2,
   Package,
@@ -31,16 +29,9 @@ import {
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
-  const { isAdmin, username, clearAdminSession } = useAuth();
+  const { isStaff, username, logoutStaff } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'hub' | 'customers' | 'brands' | 'categories' | 'category-brands' | 'security'>('hub');
-
-  // Automatically lock Admin Panel whenever user navigates away from Admin Hub
-  useEffect(() => {
-    return () => {
-      clearAdminSession();
-    };
-  }, [clearAdminSession]);
 
   const adminModules = [
     {
@@ -92,40 +83,40 @@ export const AdminPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#303631] tracking-tight flex items-center gap-2">
-            <ShieldAlert className="w-6 h-6 text-[#285943]" />
-            <span>Admin Panel &amp; Staff Management</span>
+            <ShieldCheck className="w-6 h-6 text-[#285943]" />
+            <span>Staff &amp; System Management</span>
           </h1>
           <p className="text-xs text-[#777D76] mt-0.5">
-            Centralized administration hub organizing product, inventory, analytics, staff, and sales history modules.
+            Centralized staff operations hub organizing products, inventory, customers, categories, brands, and telemetry.
           </p>
         </div>
 
-        <Badge variant={isAdmin ? 'admin' : 'staff'} className="py-1 px-3 gap-1.5 text-xs font-bold">
-          {isAdmin ? <Unlock className="w-3.5 h-3.5 text-[#285943]" /> : <Lock className="w-3.5 h-3.5 text-[#71836A]" />}
-          <span>{isAdmin ? 'ADMINISTRATOR PRIVILEGES ACTIVE' : 'STAFF ACCESS MODE'}</span>
+        <Badge variant={isStaff ? 'staff' : 'default'} className={`py-1 px-3 gap-1.5 text-xs font-bold ${isStaff ? 'bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]' : 'bg-[#FAF9F5] text-[#777D76] border border-[#E5E4DC]'}`}>
+          {isStaff ? <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" /> : <Lock className="w-3.5 h-3.5 text-[#71836A]" />}
+          <span>{isStaff ? 'STAFF MODE ACTIVE' : 'STAFF LOGIN REQUIRED'}</span>
         </Badge>
       </div>
 
       {/* Session Security Card */}
-      <Card className={isAdmin ? 'border-[#C2D9C8] bg-[#EEF5F0]/20' : 'border-[#E5E4DC]'}>
+      <Card className={isStaff ? 'border-[#C2D9C8] bg-[#EEF5F0]/20' : 'border-[#E5E4DC]'}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2 text-[#303631]">
-              {isAdmin ? <ShieldCheck className="w-5 h-5 text-[#285943]" /> : <ShieldAlert className="w-5 h-5 text-[#777D76]" />}
+              <ShieldCheck className="w-5 h-5 text-[#285943]" />
               <span>Session Authorization Status</span>
             </CardTitle>
             <span className="text-xs font-mono text-[#777D76]">
-              {isAdmin ? `Active Admin: ${username || 'admin'}` : 'Unauthenticated (Staff Mode)'}
+              {isStaff ? `Active Staff: ${username || 'staff'}` : 'Customer Mode (Unauthenticated)'}
             </span>
           </div>
           <CardDescription>
-            {isAdmin
-              ? 'You have active administrative privileges. Bearer authorization token is attached to privileged API calls.'
-              : 'The terminal is currently running under Staff mode. Admin Panel modules and privileged operations require Administrator authentication.'}
+            {isStaff
+              ? 'You have active staff management privileges. Bearer authorization token is attached to management API calls.'
+              : 'The terminal is currently running in Customer Mode. Management modules and privileged operations require Staff authentication.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isAdmin ? (
+          {isStaff ? (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
               <div className="flex items-center gap-2 text-xs text-[#285943]">
                 <CheckCircle2 className="w-4 h-4 text-[#285943] shrink-0" />
@@ -134,11 +125,11 @@ export const AdminPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={clearAdminSession}
+                onClick={logoutStaff}
                 className="text-xs text-[#A63A38] hover:bg-[#F8EFEF] hover:border-[#ECD1D0] gap-1.5 shrink-0 font-bold"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Lock &amp; Return to Staff</span>
+                <span>Exit Staff Mode</span>
               </Button>
             </div>
           ) : (
@@ -148,9 +139,9 @@ export const AdminPage: React.FC = () => {
                   <Key className="w-4 h-4 text-[#285943]" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-[#303631]">Unlock Administrator Privileges</h4>
+                  <h4 className="text-sm font-semibold text-[#303631]">Staff Mode Authentication</h4>
                   <p className="text-xs text-[#777D76]">
-                    Enter the master administrator password to unlock full access across all 5 management modules.
+                    Enter the staff password to unlock full access across all 5 management modules.
                   </p>
                 </div>
               </div>
@@ -160,8 +151,8 @@ export const AdminPage: React.FC = () => {
                 onClick={() => setShowUnlockModal(true)}
                 className="gap-1.5 shrink-0 font-bold"
               >
-                <Unlock className="w-3.5 h-3.5" />
-                <span>Unlock Admin Mode</span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Staff Login</span>
               </Button>
             </div>
           )}
@@ -249,7 +240,7 @@ export const AdminPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Tab 1: 5 Core Admin Modules Hub (Requirement 1B) */}
+      {/* Tab 1: 5 Core Management Modules Hub */}
       {activeTab === 'hub' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -257,7 +248,7 @@ export const AdminPage: React.FC = () => {
               Management Modules Overview
             </h3>
             <span className="text-xs text-[#777D76]">
-              All 5 modules require administrator authorization
+              All 5 modules fully accessible in Staff Mode
             </span>
           </div>
 
@@ -351,10 +342,10 @@ export const AdminPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2 text-[#303631]">
                 <UserCheck className="w-5 h-5 text-[#285943]" />
-                <span>Staff &amp; Role Access Control Matrix</span>
+                <span>Two-Mode Access Control Matrix (Customer Mode vs Staff Mode)</span>
               </CardTitle>
               <CardDescription>
-                Overview of functional permissions assigned to Staff and Administrator accounts.
+                System authorization enforcing exact two-mode operations between Customer and Staff tiers.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -362,40 +353,50 @@ export const AdminPage: React.FC = () => {
                 <thead>
                   <tr className="border-b border-[#E5E4DC] text-[#777D76] font-semibold text-[10px] uppercase">
                     <th className="py-2.5 px-3">System Module / Workflow</th>
-                    <th className="py-2.5 px-3 text-center">Staff Mode</th>
-                    <th className="py-2.5 px-3 text-center">Administrator Mode</th>
+                    <th className="py-2.5 px-3 text-center">Customer Mode</th>
+                    <th className="py-2.5 px-3 text-center">Staff Mode (Full Management)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E4DC]/60 text-xs text-[#303631]">
                   <tr>
-                    <td className="py-2.5 px-3 font-semibold">Billing &amp; Checkout Terminal</td>
+                    <td className="py-2.5 px-3 font-semibold">Browse Products, Categories &amp; Pricing</td>
                     <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed</td>
                     <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3 font-semibold">View Product Catalog &amp; Search</td>
+                    <td className="py-2.5 px-3 font-semibold">Shopping Cart &amp; POS Checkout</td>
                     <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed</td>
                     <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3 font-semibold">Create / Edit / Archive Products</td>
-                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Protected</td>
-                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Bearer Token)</td>
+                    <td className="py-2.5 px-3 font-semibold">View Generated Receipt Snapshot</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Own Receipt)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed</td>
                   </tr>
                   <tr>
-                    <td className="py-2.5 px-3 font-semibold">Inventory Stock Adjustments</td>
-                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Protected</td>
-                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Bearer Token)</td>
+                    <td className="py-2.5 px-3 font-semibold">Add / Edit / Deactivate Products</td>
+                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Blocked (401/403)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Full Access)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-semibold">Inventory Stock Adjustments &amp; Alerts</td>
+                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Blocked (401/403)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Full Access)</td>
                   </tr>
                   <tr>
                     <td className="py-2.5 px-3 font-semibold">Brand &amp; Category Master Configuration</td>
-                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Protected</td>
-                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Bearer Token)</td>
+                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Blocked (401/403)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Full Access)</td>
                   </tr>
                   <tr>
                     <td className="py-2.5 px-3 font-semibold">Sales Analytics &amp; Revenue Reports</td>
-                    <td className="py-2.5 px-3 text-center text-[#777D76]">Standard View</td>
-                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Full Access</td>
+                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Blocked (401/403)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Full Access)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-semibold">Complete Transactions &amp; Sales Ledger</td>
+                    <td className="py-2.5 px-3 text-center text-[#A63A38] font-bold">Blocked (401/403)</td>
+                    <td className="py-2.5 px-3 text-center text-[#2E6F40] font-bold">Allowed (Full Access)</td>
                   </tr>
                 </tbody>
               </table>
@@ -410,7 +411,7 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* Admin Unlock Modal */}
+      {/* Staff Login Modal */}
       <AdminUnlockModal
         isOpen={showUnlockModal}
         onClose={() => setShowUnlockModal(false)}

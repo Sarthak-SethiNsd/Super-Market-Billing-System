@@ -8,57 +8,80 @@
 AuthService::AuthService(DatabaseConnection& conn, int sessionDuration)
     : db(conn), sessionDurationSeconds(sessionDuration) {}
 
-bool AuthService::isAdminConfigured() {
+bool AuthService::isStaffConfigured() {
     UserRepository userRepo(db);
-    return userRepo.adminExists();
+    return userRepo.findByUsername("staff").has_value() || userRepo.findByUsername("admin").has_value();
 }
 
-bool AuthService::initializeAdminFromEnv(const std::string& envVarName) {
+bool AuthService::initializeStaffFromEnv(const std::string& envVarName) {
     UserRepository userRepo(db);
-    if (userRepo.adminExists()) {
+
+    // Ensure any legacy ADMIN records are migrated to STAFF role
+    try {
+        db.execute("UPDATE users SET role = 'STAFF' WHERE role = 'ADMIN';");
+    } catch (...) {}
+
+    if (isStaffConfigured()) {
         return true;
     }
 
     const char* envVal = std::getenv(envVarName.c_str());
     if (!envVal || std::string(envVal).empty()) {
+        envVal = std::getenv("ADMIN_INITIAL_PASSWORD");
+    }
+    if (!envVal || std::string(envVal).empty()) {
+        envVal = std::getenv("STAFF_INITIAL_PASSWORD");
+    }
+
+    if (!envVal || std::string(envVal).empty()) {
         std::cerr << "[AUTH WARNING] " << envVarName
-                  << " environment variable is not set. No default admin created.\n";
+                  << " environment variable is not set. No default staff account created.\n";
         return false;
     }
 
-    createOrUpdateAdmin(envVal);
-    std::cout << "[AUTH INFO] Initial admin account created successfully from environment.\n";
+    createOrUpdateStaff(envVal);
+    std::cout << "[AUTH INFO] Initial staff account created successfully from environment.\n";
     return true;
 }
 
-void AuthService::createOrUpdateAdmin(const std::string& password) {
+void AuthService::createOrUpdateStaff(const std::string& password) {
     if (password.length() < 6) {
-        throw std::invalid_argument("Admin password must be at least 6 characters long");
+        throw std::invalid_argument("Staff password must be at least 6 characters long");
     }
 
     UserRepository userRepo(db);
     std::string salt = CryptoUtils::generateRandomHex(CryptoUtils::SALT_BYTE_LENGTH);
     std::string hash = CryptoUtils::hashPasswordPBKDF2(password, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS);
 
-    if (userRepo.adminExists()) {
+    try {
+        db.execute("UPDATE users SET role = 'STAFF' WHERE role = 'ADMIN';");
+    } catch (...) {}
+
+    if (userRepo.findByUsername("staff").has_value()) {
+        userRepo.updateUserPassword("staff", hash, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS);
+    } else if (userRepo.findByUsername("admin").has_value()) {
         userRepo.updateUserPassword("admin", hash, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS);
+        userRepo.createUser("staff", hash, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, "STAFF");
     } else {
-        userRepo.createUser("admin", hash, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, "ADMIN");
+        userRepo.createUser("staff", hash, salt, CryptoUtils::DEFAULT_PBKDF2_ITERATIONS, "STAFF");
     }
 }
 
-std::optional<std::string> AuthService::unlockAdmin(const std::string& password) {
+std::optional<std::string> AuthService::loginStaff(const std::string& password) {
     UserRepository userRepo(db);
-    auto adminUser = userRepo.findByUsername("admin");
-    if (!adminUser.has_value()) {
+    auto staffUser = userRepo.findByUsername("staff");
+    if (!staffUser.has_value()) {
+        staffUser = userRepo.findByUsername("admin");
+    }
+    if (!staffUser.has_value()) {
         return std::nullopt;
     }
 
     bool valid = CryptoUtils::verifyPasswordPBKDF2(
         password,
-        adminUser->salt,
-        adminUser->iterations,
-        adminUser->passwordHash
+        staffUser->salt,
+        staffUser->iterations,
+        staffUser->passwordHash
     );
 
     if (!valid) {
@@ -71,8 +94,8 @@ std::optional<std::string> AuthService::unlockAdmin(const std::string& password)
 
     SessionInfo session;
     session.token = token;
-    session.username = "admin";
-    session.role = "ADMIN";
+    session.username = staffUser->username;
+    session.role = "STAFF";
     session.createdAt = now;
     session.expiresAt = now + sessionDurationSeconds;
 

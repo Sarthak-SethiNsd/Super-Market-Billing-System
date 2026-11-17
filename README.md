@@ -17,7 +17,7 @@ The project couples a high-performance **C++17 / Crow REST API** microservice an
 - **Integer Currency Representation:** All financial calculations strictly utilize signed 64-bit integer paise (`int64_t`), eliminating floating-point rounding drift.
 - **Immutable Historical Invoices:** Sales transactions snapshot line item names, brands, unit prices, discounts, and line totals at the exact moment of checkout.
 - **Audit Movement Ledger (`/inventory`):** Complete append-only audit trail logging stock additions, reductions, write-offs, and checkout sales.
-- **Role-Based Access Control (RBAC):** Two-tier security model distinguishing default Cashier/Staff operations from privileged Administrator management.
+- **Role-Based Access Control (RBAC):** Clean two-mode operational architecture separating unauthenticated **Customer Mode** (product discovery, catalog browsing, and self-checkout) from password-protected **Staff Mode** (full operational dashboard, inventory management, product CRUD, and sales analytics).
 - **PBKDF2-HMAC-SHA256 Cryptography:** Secure password hashing (100,000 iterations, 128-bit random salt) via Windows CNG on Windows and OpenSSL 3.x on Linux.
 - **Interactive OOP Concepts Explorer (`/oop-concepts`):** Academic demonstration module with interactive class hierarchy diagrams, live discount strategy simulator, and object slicing demo.
 
@@ -105,9 +105,9 @@ The database includes a pre-seeded demonstration dataset:
 - **19 Popular Indian Brands** (*Amul, Aashirvaad, Tata, Britannia, Dettol, Surf Excel*, etc.).
 - **Perishable Stock:** Milk, butter, paneer, and produce with future ISO expiry dates.
 - **Low-Stock Alert Item:** `Fresh Organic Baby Spinach Palak 250g` initialized with **3 units** ($\le 5$) for reorder alert demonstrations.
-- **Demonstration Administrator:** Pre-configured credentials:
-  - **Username:** `admin`
-  - **Password:** `admin123`
+- **Demonstration Staff Account:** Pre-configured credentials:
+  - **Role:** `STAFF`
+  - **Password:** `admin123` (or configured via environment variable `STAFF_INITIAL_PASSWORD` / `STAFF_PASSWORD`)
 
 To re-seed or verify the database idempotently at any time:
 ```powershell

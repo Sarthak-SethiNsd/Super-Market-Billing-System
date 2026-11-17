@@ -94,37 +94,37 @@ int main() {
                 std::cout << "  -> PASSED\n";
             }
 
-            // 2. Auth Endpoint Tests (Admin Unlock)
-            std::cout << "[RUNNING] 2. Admin Authentication & Session Management...\n";
+            // 2. Auth Endpoint Tests (Staff Authentication)
+            std::cout << "[RUNNING] 2. Staff Authentication & Session Management...\n";
             {
                 // Invalid password
-                auto resFail = makeRequest(server, "POST", "/api/auth/admin/unlock", "{\"password\":\"WrongPass123!\"}");
+                auto resFail = makeRequest(server, "POST", "/api/auth/staff/login", "{\"password\":\"WrongPass123!\"}");
                 TEST_ASSERT(resFail.code == 401);
                 auto jFail = nlohmann::json::parse(resFail.body);
                 TEST_ASSERT(jFail["success"] == false);
 
-                // Valid password
-                auto resSuccess = makeRequest(server, "POST", "/api/auth/admin/unlock", "{\"password\":\"SuperSecret123!\"}");
+                // Valid password via primary staff login endpoint
+                auto resSuccess = makeRequest(server, "POST", "/api/auth/staff/login", "{\"password\":\"SuperSecret123!\"}");
                 TEST_ASSERT(resSuccess.code == 200);
                 auto jSuccess = nlohmann::json::parse(resSuccess.body);
                 TEST_ASSERT(jSuccess["success"] == true);
-                TEST_ASSERT(jSuccess["data"]["role"] == "ADMIN");
+                TEST_ASSERT(jSuccess["data"]["role"] == "STAFF");
                 adminToken = jSuccess["data"]["token"].get<std::string>();
                 TEST_ASSERT(!adminToken.empty());
 
-                // Check session with valid token
+                // Check session with valid token (Staff Mode)
                 auto resSession = makeRequest(server, "GET", "/api/auth/session", "", adminToken);
                 TEST_ASSERT(resSession.code == 200);
                 auto jSession = nlohmann::json::parse(resSession.body);
-                TEST_ASSERT(jSession["data"]["canAdmin"] == true);
-                TEST_ASSERT(jSession["data"]["role"] == "ADMIN");
+                TEST_ASSERT(jSession["data"]["authenticated"] == true);
+                TEST_ASSERT(jSession["data"]["role"] == "STAFF");
 
-                // Check session without token (Staff mode)
+                // Check session without token (Customer Mode default)
                 auto resAnonSession = makeRequest(server, "GET", "/api/auth/session");
                 TEST_ASSERT(resAnonSession.code == 200);
                 auto jAnon = nlohmann::json::parse(resAnonSession.body);
-                TEST_ASSERT(jAnon["data"]["canAdmin"] == false);
-                TEST_ASSERT(jAnon["data"]["role"] == "STAFF");
+                TEST_ASSERT(jAnon["data"]["authenticated"] == false);
+                TEST_ASSERT(jAnon["data"]["role"] == "CUSTOMER");
 
                 std::cout << "  -> PASSED\n";
             }
@@ -386,8 +386,12 @@ int main() {
             // 9. Database Aggregates & Pagination Metadata Test
             std::cout << "[RUNNING] 9. Database Summary Aggregates & Pagination Metadata...\n";
             {
-                // Test GET /api/bills/summary
-                auto resBillSum = makeRequest(server, "GET", "/api/bills/summary");
+                // Customer Mode unauthorized to view internal sales summary (401)
+                auto resAnonBillSum = makeRequest(server, "GET", "/api/bills/summary");
+                TEST_ASSERT(resAnonBillSum.code == 401 || resAnonBillSum.code == 403);
+
+                // Authenticated Staff Mode receives 200 with sales summary
+                auto resBillSum = makeRequest(server, "GET", "/api/bills/summary", "", adminToken);
                 TEST_ASSERT(resBillSum.code == 200);
                 auto jBillSum = nlohmann::json::parse(resBillSum.body);
                 TEST_ASSERT(jBillSum["data"]["totalBills"] == 1);
@@ -396,8 +400,12 @@ int main() {
                 TEST_ASSERT(jBillSum["data"]["totalNetPaise"] == 162000);
                 TEST_ASSERT(jBillSum["data"]["totalUnitsSold"] == 4);
 
-                // Test GET /api/bills pagination headers
-                auto resPagedBills = makeRequest(server, "GET", "/api/bills?limit=1&offset=0");
+                // Customer Mode unauthorized to view sales ledger (401)
+                auto resAnonBills = makeRequest(server, "GET", "/api/bills?limit=1&offset=0");
+                TEST_ASSERT(resAnonBills.code == 401 || resAnonBills.code == 403);
+
+                // Authenticated Staff Mode receives 200 with pagination headers
+                auto resPagedBills = makeRequest(server, "GET", "/api/bills?limit=1&offset=0", "", adminToken);
                 TEST_ASSERT(resPagedBills.code == 200);
                 TEST_ASSERT(resPagedBills.get_header_value("X-Total-Count") == "1");
                 TEST_ASSERT(resPagedBills.get_header_value("X-Limit") == "1");

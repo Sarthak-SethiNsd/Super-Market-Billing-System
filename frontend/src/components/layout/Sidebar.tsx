@@ -7,14 +7,11 @@ import {
   Receipt,
   Boxes,
   BarChart3,
-  ShieldAlert,
   Code2,
   Store,
   ChevronLeft,
   ChevronRight,
-  Shield,
-  UserCheck,
-  Lock
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -31,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onCloseMobile,
 }) => {
-  const { role, isAdmin } = useAuth();
+  const { role, isStaff } = useAuth();
   const location = useLocation();
 
   const operationItems = [
@@ -39,13 +36,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: 'Billing & Checkout', path: '/billing', icon: ShoppingCart },
   ];
 
-  const adminModules = [
-    { name: 'Admin Panel Hub', path: '/admin', icon: ShieldAlert },
+  const managementModules = [
     { name: 'Product Management', path: '/products', icon: Package },
     { name: 'Inventory Management', path: '/inventory', icon: Boxes },
     { name: 'Sales Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Staff Management', path: '/admin', icon: UserCheck },
-    { name: 'Transactions & Sales History', path: '/transactions', icon: Receipt },
+    { name: 'Transactions & Sales', path: '/transactions', icon: Receipt },
+    { name: 'Staff & System', path: '/admin', icon: UserCheck },
   ];
 
   const technicalItems = [
@@ -104,27 +100,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* Admin Panel Section */}
+        {/* Management Tools Section (Staff Mode) */}
         <div className="space-y-1 pt-2 border-t border-[#334c41]/50">
           <div className={`flex items-center justify-between px-3 mb-2 text-[10px] font-semibold text-[#82998e] uppercase tracking-wider ${collapsed ? 'hidden' : 'flex'}`}>
-            <span>Admin Panel</span>
-            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${isAdmin ? 'bg-[#285943] text-white' : 'bg-[#1d2d26] text-[#82998e]'}`}>
-              {isAdmin ? 'UNLOCKED' : 'AUTH REQ'}
+            <span>Management Tools</span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-[#285943] text-white">
+              STAFF
             </span>
           </div>
-          {adminModules.map((item, idx) => {
+          {managementModules.map((item, idx) => {
             const Icon = item.icon;
-            // Prevent duplicate NavLink rendering when on /admin for both hub & staff
-            const isStaffItem = item.name === 'Staff Management';
             return (
               <NavLink
                 key={`${item.path}-${idx}`}
                 to={item.path}
                 onClick={onCloseMobile}
                 className={({ isActive }) => {
-                  const active = isStaffItem ? false : isActive;
                   return `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-all group relative ${
-                    active
+                    isActive
                       ? 'bg-[#285943] text-white shadow-xs'
                       : 'text-[#b4c7be] hover:text-white hover:bg-[#1f3029]'
                   } ${collapsed ? 'justify-center px-2' : ''}`;
@@ -134,9 +127,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Icon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
                 {!collapsed && (
                   <span className="truncate flex-1 text-xs">{item.name}</span>
-                )}
-                {!collapsed && !isAdmin && (
-                  <Lock className="w-3 h-3 text-[#777D76] shrink-0" />
                 )}
               </NavLink>
             );
@@ -198,15 +188,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-[#334c41] bg-[#1f3029]/80">
         <div className={`flex items-center gap-3 p-2 rounded bg-[#192621] border border-[#2f4339] ${collapsed ? 'justify-center p-1.5' : ''}`}>
           <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 bg-[#285943] text-white">
-            {isAdmin ? <Shield className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+            <UserCheck className="w-4 h-4" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-white truncate">
-                {isAdmin ? 'System Administrator' : 'Terminal Operator'}
+                {isStaff ? 'Supermarket Staff' : 'Customer Session'}
               </div>
               <div className="text-[11px] text-[#9cb5a8] flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-[#e8cda2]' : 'bg-[#71836A]'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${isStaff ? 'bg-[#71836A]' : 'bg-blue-400'}`} />
                 {role} Mode
               </div>
             </div>

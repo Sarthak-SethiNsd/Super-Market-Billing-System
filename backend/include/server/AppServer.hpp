@@ -40,7 +40,7 @@ private:
         CategoryController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         ProductController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         InventoryController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
-        BillController::registerRoutes(app, *dbConnection, config.allowedOrigin);
+        BillController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         CustomerController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
     }
 
@@ -53,7 +53,7 @@ public:
         }
 
         authService = std::make_unique<AuthService>(*dbConnection, config.sessionDurationSeconds);
-        authService->initializeAdminFromEnv("ADMIN_INITIAL_PASSWORD");
+        authService->initializeStaffFromEnv("STAFF_PASSWORD");
 
         app.get_middleware<ControllerUtils::CorsMiddleware>().allowedOrigin = config.allowedOrigin;
         setupRoutes();

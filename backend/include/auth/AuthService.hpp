@@ -37,14 +37,22 @@ private:
 public:
     explicit AuthService(DatabaseConnection& conn, int sessionDuration = 3600);
 
-    bool initializeAdminFromEnv(const std::string& envVarName = "ADMIN_INITIAL_PASSWORD");
-    bool isAdminConfigured();
-    void createOrUpdateAdmin(const std::string& password);
+    bool initializeStaffFromEnv(const std::string& envVarName = "STAFF_PASSWORD");
+    bool isStaffConfigured();
+    void createOrUpdateStaff(const std::string& password);
 
-    std::optional<std::string> unlockAdmin(const std::string& password);
+    std::optional<std::string> loginStaff(const std::string& password);
     std::optional<SessionInfo> validateToken(const std::string& token);
     bool logout(const std::string& token);
     void cleanupExpiredSessions();
     void clearAllSessions(); // For testing
     int getSessionDurationSeconds() const { return sessionDurationSeconds; }
+
+    // Backward-compatible aliases for legacy callers
+    bool initializeAdminFromEnv(const std::string& envVarName = "ADMIN_INITIAL_PASSWORD") {
+        return initializeStaffFromEnv(envVarName);
+    }
+    bool isAdminConfigured() { return isStaffConfigured(); }
+    void createOrUpdateAdmin(const std::string& password) { createOrUpdateStaff(password); }
+    std::optional<std::string> unlockAdmin(const std::string& password) { return loginStaff(password); }
 };

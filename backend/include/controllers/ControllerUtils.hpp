@@ -159,20 +159,24 @@ inline bool parseStrictIntField(const nlohmann::json& obj, const char* key, int 
     return true;
 }
 
-inline bool requireAdmin(const crow::request& req, class AuthService& auth, const std::string& allowedOrigin, crow::response& errRes) {
+inline bool requireStaff(const crow::request& req, class AuthService& auth, const std::string& allowedOrigin, crow::response& errRes) {
     std::string token = extractBearerToken(req);
     if (token.empty()) {
-        errRes = errorResponse(401, "Authentication token required for administrative action", allowedOrigin);
+        errRes = errorResponse(401, "Authentication token required for staff action", allowedOrigin);
         return false;
     }
 
     auto session = auth.validateToken(token);
-    if (!session.has_value() || session->role != "ADMIN") {
-        errRes = errorResponse(403, "Invalid, expired, or insufficient permissions for administrative action", allowedOrigin);
+    if (!session.has_value() || (session->role != "STAFF" && session->role != "ADMIN")) {
+        errRes = errorResponse(403, "Invalid, expired, or insufficient permissions for staff action", allowedOrigin);
         return false;
     }
 
     return true;
+}
+
+inline bool requireAdmin(const crow::request& req, class AuthService& auth, const std::string& allowedOrigin, crow::response& errRes) {
+    return requireStaff(req, auth, allowedOrigin, errRes);
 }
 
 struct CorsMiddleware {

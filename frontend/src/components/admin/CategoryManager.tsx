@@ -10,7 +10,7 @@ import { categoryService } from '@/services/categoryService';
 import { useAuth } from '@/context/AuthContext';
 
 export const CategoryManager: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -136,7 +136,7 @@ export const CategoryManager: React.FC = () => {
               <CardDescription className="text-xs">Product categories and taxonomy</CardDescription>
             </div>
           </div>
-          {isAdmin ? (
+          {isStaff ? (
             <Button
               variant="primary"
               size="sm"
@@ -147,7 +147,7 @@ export const CategoryManager: React.FC = () => {
               Add Category
             </Button>
           ) : (
-            <Badge variant="staff">Read-Only (Staff)</Badge>
+            <Badge variant="default">Customer Mode</Badge>
           )}
         </div>
 
@@ -211,7 +211,7 @@ export const CategoryManager: React.FC = () => {
                   </div>
                 </div>
 
-                {isAdmin && (
+                {isStaff && (
                   <div className="flex items-center gap-1 shrink-0 ml-3">
                     <button
                       onClick={() => openEditModal(c)}

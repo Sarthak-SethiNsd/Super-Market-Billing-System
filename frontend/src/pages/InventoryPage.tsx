@@ -27,7 +27,7 @@ import { useAuth } from '@/context/AuthContext';
 import { StockAdjustmentModal } from '@/components/inventory/StockAdjustmentModal';
 
 export const InventoryPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
@@ -167,7 +167,7 @@ export const InventoryPage: React.FC = () => {
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
-          {isAdmin ? (
+          {isStaff ? (
             <Button
               variant="primary"
               size="sm"
@@ -178,7 +178,7 @@ export const InventoryPage: React.FC = () => {
               Adjust Stock
             </Button>
           ) : (
-            <Badge variant="staff">Staff Mode (Audit View Only)</Badge>
+            <Badge variant="default">Customer Mode</Badge>
           )}
         </div>
       </div>

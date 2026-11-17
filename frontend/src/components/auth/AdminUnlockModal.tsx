@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/Button';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/context/AuthContext';
 
-interface AdminUnlockModalProps {
+interface StaffLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onClose }) => {
+export const StaffLoginModal: React.FC<StaffLoginModalProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { setAdminToken } = useAuth();
+  const { loginStaff } = useAuth();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,21 +23,21 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setError('Please enter the administrator password.');
+      setError('Please enter the staff password.');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      const res = await authService.unlockAdmin(password);
-      await setAdminToken(res.token);
+      const res = await authService.loginStaff(password);
+      await loginStaff(res.token);
       setPassword('');
       onClose();
-      navigate('/admin');
+      navigate('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message || 'Authentication failed. Please check the administrator password.');
+        setError(err.message || 'Authentication failed. Please check the staff password.');
       } else {
         setError('Authentication failed. Server unreachable or invalid password.');
       }
@@ -60,14 +60,14 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
               <Lock className="w-4 h-4 text-[#71836A]" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Unlock Administrator Privileges</h3>
-              <p className="text-xs text-[#d6e2dc]">Requires backend PBKDF2 verification</p>
+              <h3 className="font-bold text-white text-sm">Staff Mode Authentication</h3>
+              <p className="text-xs text-[#d6e2dc]">Access supermarket management &amp; inventory</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close unlock administrator modal"
+            aria-label="Close staff login modal"
             className="text-[#d6e2dc] hover:text-white p-1 rounded hover:bg-[#1f3029] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943]"
             disabled={isLoading}
           >
@@ -86,29 +86,29 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-slate-700">
-              Administrator Password
+              Staff Password
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password..."
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900 placeholder:text-slate-400 pr-10"
+                placeholder="Enter staff password..."
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#285943]/20 focus:border-[#285943] text-slate-900 placeholder:text-slate-400 pr-10"
                 autoFocus
                 disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide administrator password' : 'Show administrator password'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                aria-label={showPassword ? 'Hide staff password' : 'Show staff password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285943]"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
             <p className="text-[11px] text-slate-400">
-              Verified server-side against PBKDF2-HMAC-SHA256 (100k rounds) via Windows CNG.
+              Secured with cryptographic PBKDF2-HMAC-SHA256 password verification.
             </p>
           </div>
 
@@ -130,7 +130,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
               className="bg-[#285943] hover:bg-[#1e4433] focus:ring-[#285943] text-white gap-1.5"
             >
               <ShieldCheck className="w-4 h-4" />
-              Unlock Session
+              Authenticate Staff
             </Button>
           </div>
         </form>
@@ -138,3 +138,6 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
     </div>
   );
 };
+
+// Backward-compatible alias
+export const AdminUnlockModal = StaffLoginModal;

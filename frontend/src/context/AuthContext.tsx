@@ -4,10 +4,13 @@ import { authService } from '@/services/authService';
 
 interface AuthContextType {
   role: Role;
-  isAdmin: boolean;
+  isStaff: boolean;
+  isAdmin: boolean; // Backward-compatible alias for isStaff
   username?: string;
   isLoading: boolean;
   token: string | null;
+  loginStaff: (token: string) => Promise<void>;
+  logoutStaff: () => Promise<void>;
   setAdminToken: (token: string) => Promise<void>;
   clearAdminSession: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -15,15 +18,18 @@ interface AuthContextType {
 
 const defaultSession: UserSession = {
   authenticated: false,
-  role: 'STAFF',
+  role: 'CUSTOMER',
   canAdmin: false,
 };
 
 const AuthContext = createContext<AuthContextType>({
-  role: 'STAFF',
+  role: 'CUSTOMER',
+  isStaff: false,
   isAdmin: false,
   isLoading: true,
   token: null,
+  loginStaff: async () => {},
+  logoutStaff: async () => {},
   setAdminToken: async () => {},
   clearAdminSession: async () => {},
   refreshSession: async () => {},
@@ -31,7 +37,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<UserSession>(defaultSession);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('sms_admin_token'));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('sms_staff_token') || localStorage.getItem('sms_admin_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const refreshSession = useCallback(async () => {
@@ -40,12 +46,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const serverSession = await authService.getSession();
       setSession(serverSession);
       // If token expired on server, wipe local storage
-      if (!serverSession.authenticated && localStorage.getItem('sms_admin_token')) {
+      if (!serverSession.authenticated) {
+        localStorage.removeItem('sms_staff_token');
         localStorage.removeItem('sms_admin_token');
         setToken(null);
       }
     } catch {
-      // In case of backend offline, fallback safely to default Staff
+      // In case of backend offline, fallback safely to Customer Mode
       setSession(defaultSession);
     } finally {
       setIsLoading(false);
@@ -56,13 +63,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession();
   }, [refreshSession]);
 
-  const setAdminToken = useCallback(async (newToken: string) => {
+  const loginStaff = useCallback(async (newToken: string) => {
+    localStorage.setItem('sms_staff_token', newToken);
     localStorage.setItem('sms_admin_token', newToken);
     setToken(newToken);
     await refreshSession();
   }, [refreshSession]);
 
-  const clearAdminSession = useCallback(async () => {
+  const logoutStaff = useCallback(async () => {
     try {
       if (token) {
         await authService.logout();
@@ -70,22 +78,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network errors on logout
     } finally {
+      localStorage.removeItem('sms_staff_token');
       localStorage.removeItem('sms_admin_token');
       setToken(null);
       setSession(defaultSession);
     }
   }, [token]);
 
+  const isStaff = session.role === 'STAFF';
+
   return (
     <AuthContext.Provider
       value={{
         role: session.role,
-        isAdmin: session.canAdmin,
+        isStaff,
+        isAdmin: isStaff, // Backward-compatible alias
         username: session.username,
         isLoading,
         token,
-        setAdminToken,
-        clearAdminSession,
+        loginStaff,
+        logoutStaff,
+        setAdminToken: loginStaff,
+        clearAdminSession: logoutStaff,
         refreshSession,
       }}
     >

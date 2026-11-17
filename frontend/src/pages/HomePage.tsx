@@ -17,7 +17,6 @@ import {
   X,
   ShieldCheck,
   Lock,
-  Unlock,
   Server,
   Database
 } from 'lucide-react';
@@ -30,10 +29,10 @@ import { AdminUnlockModal } from '@/components/auth/AdminUnlockModal';
 export const HomePage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const { isAdmin, role } = useAuth();
+  const { isStaff } = useAuth();
   const { status, healthData } = useHealth();
 
-  const adminModules = [
+  const staffModules = [
     {
       id: 'products',
       title: 'Product Management',
@@ -57,10 +56,10 @@ export const HomePage: React.FC = () => {
     },
     {
       id: 'admin',
-      title: 'Staff Management',
+      title: 'Staff & System Management',
       route: '/admin',
       icon: UserCheck,
-      desc: 'Role permissions, administrator unlock authentication, and session security.',
+      desc: 'Role permissions, system telemetry, and session security.',
     },
     {
       id: 'transactions',
@@ -100,7 +99,7 @@ export const HomePage: React.FC = () => {
               Billing &amp; Checkout
             </Link>
             <Link to="/admin" className="hover:text-[#285943] transition-colors">
-              Admin Panel
+              Staff Portal
             </Link>
             <Link to="/oop-concepts" className="hover:text-[#285943] transition-colors">
               OOP Concepts
@@ -215,7 +214,7 @@ export const HomePage: React.FC = () => {
                 Supermarket Billing &amp; Inventory Management Platform
               </h1>
               <p className="text-xs sm:text-sm text-[#b4c7be] leading-relaxed">
-                Supermart is a clean, organized management platform. The application provides two primary workflows: fast Billing &amp; Checkout for processing sales orders, and a centralized Admin Panel for managing products, inventory, staff, and financial analytics.
+                Supermart provides exactly two distinct operating modes: Customer Mode for browsing products, pricing, and fast POS checkout; and password-protected Staff Mode for managing catalog, inventory, transactions, and business analytics.
               </p>
             </div>
 
@@ -225,15 +224,15 @@ export const HomePage: React.FC = () => {
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded font-bold text-xs bg-[#285943] hover:bg-[#1e4433] text-white border border-[#3d5a4d] transition-colors shadow-xs"
               >
                 <ShoppingCart className="w-4 h-4" />
-                <span>Billing &amp; Checkout</span>
+                <span>Customer Checkout</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                to="/admin"
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded font-bold text-xs bg-[#1f3029] hover:bg-[#192621] text-white border border-[#334c41] transition-colors"
               >
-                <ShieldAlert className="w-4 h-4 text-[#71836A]" />
-                <span>Admin Panel</span>
+                <ShieldCheck className="w-4 h-4 text-[#71836A]" />
+                <span>Staff Portal</span>
               </Link>
             </div>
           </div>
@@ -340,33 +339,33 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* SECTION B: ADMIN PANEL (7 cols) */}
+          {/* SECTION B: STAFF MANAGEMENT PORTAL (7 cols) */}
           <div className="lg:col-span-7 bg-white rounded border border-[#E5E4DC] p-6 space-y-5 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E4DC] pb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${isAdmin ? 'bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]' : 'bg-[#FAF3EA] text-[#C87D20] border border-[#F0DDC5]'}`}>
-                    {isAdmin ? 'Administrator Mode Active' : 'Administrator Authorization Required'}
+                  <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${isStaff ? 'bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]' : 'bg-[#FAF3EA] text-[#C87D20] border border-[#F0DDC5]'}`}>
+                    {isStaff ? 'Staff Mode Active' : 'Staff Password Authentication Required'}
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-[#303631] flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-[#285943]" />
-                  Admin Panel
+                  <ShieldCheck className="w-5 h-5 text-[#285943]" />
+                  Staff Management Portal
                 </h2>
                 <p className="text-xs text-[#777D76] mt-0.5">
-                  Unified administrative control center organizing the 5 management modules.
+                  Full operational control center organizing the 5 management modules.
                 </p>
               </div>
 
               <div className="shrink-0">
-                {isAdmin ? (
-                  <Link to="/admin">
+                {isStaff ? (
+                  <Link to="/dashboard">
                     <button
                       type="button"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#285943] text-xs font-bold text-[#285943] hover:bg-[#EEF5F0] transition-colors"
                     >
-                      <Unlock className="w-3.5 h-3.5" />
-                      <span>Open Admin Hub</span>
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      <span>Open Staff Dashboard</span>
                     </button>
                   </Link>
                 ) : (
@@ -376,15 +375,15 @@ export const HomePage: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#285943] text-white text-xs font-bold hover:bg-[#1e4433] transition-colors"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Unlock Admin</span>
+                    <span>Staff Login</span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* The 5 Admin Modules (Requirement 1B) */}
+            {/* The 5 Staff Modules */}
             <div className="space-y-2.5">
-              {adminModules.map((mod) => {
+              {staffModules.map((mod) => {
                 const Icon = mod.icon;
                 return (
                   <Link
@@ -401,9 +400,9 @@ export const HomePage: React.FC = () => {
                           <span className="font-bold text-sm text-[#303631] group-hover:text-[#285943] transition-colors">
                             {mod.title}
                           </span>
-                          {!isAdmin && (
+                          {!isStaff && (
                             <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                              Admin Only
+                              Staff Protected
                             </span>
                           )}
                         </div>
@@ -419,9 +418,9 @@ export const HomePage: React.FC = () => {
             </div>
 
             <div className="pt-2 border-t border-[#E5E4DC] flex items-center justify-between text-xs text-[#777D76]">
-              <span>Staff accounts have access to checkout and assigned operational views only.</span>
+              <span>Authenticated Staff users receive full access to all inventory, catalog, and reporting tools.</span>
               <Link to="/admin" className="font-bold text-[#285943] hover:underline flex items-center gap-1">
-                <span>Admin Hub →</span>
+                <span>Staff Portal →</span>
               </Link>
             </div>
           </div>
@@ -516,8 +515,8 @@ export const HomePage: React.FC = () => {
                   <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" />
                   <span>Security &amp; Auth</span>
                 </span>
-                <Badge variant={isAdmin ? 'admin' : 'staff'} className="text-[10px]">
-                  {role}
+                <Badge variant={isStaff ? 'staff' : 'default'} className="text-[10px]">
+                  {isStaff ? 'STAFF' : 'CUSTOMER'}
                 </Badge>
               </div>
               <div className="space-y-1 text-[11px]">
@@ -527,7 +526,7 @@ export const HomePage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Access Tier:</span>
-                  <span className="font-medium text-[#303631]">{isAdmin ? 'Administrator (Full)' : 'Staff (Checkout)'}</span>
+                  <span className="font-medium text-[#303631]">{isStaff ? 'Staff Mode (Full Operational Management)' : 'Customer Mode (Shopping & Checkout)'}</span>
                 </div>
               </div>
             </div>
@@ -555,7 +554,7 @@ export const HomePage: React.FC = () => {
               <span>•</span>
               <Link to="/billing" className="hover:text-white transition-colors">Billing &amp; Checkout</Link>
               <span>•</span>
-              <Link to="/admin" className="hover:text-white transition-colors">Admin Panel</Link>
+              <Link to="/admin" className="hover:text-white transition-colors">Staff Portal</Link>
               <span>•</span>
               <Link to="/products" className="hover:text-white transition-colors">Products</Link>
               <span>•</span>
@@ -584,7 +583,7 @@ export const HomePage: React.FC = () => {
         </div>
       </footer>
 
-      {/* Admin Unlock Modal */}
+      {/* Staff Login Modal */}
       <AdminUnlockModal
         isOpen={showUnlockModal}
         onClose={() => setShowUnlockModal(false)}

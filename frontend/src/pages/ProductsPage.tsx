@@ -25,7 +25,7 @@ import { ProductFormModal } from '@/components/products/ProductFormModal';
 import { ProductDeleteModal } from '@/components/products/ProductDeleteModal';
 
 export const ProductsPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isStaff } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -138,7 +138,7 @@ export const ProductsPage: React.FC = () => {
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
-          {isAdmin ? (
+          {isStaff ? (
             <Button
               variant="primary"
               size="sm"
@@ -149,7 +149,7 @@ export const ProductsPage: React.FC = () => {
               Add Product
             </Button>
           ) : (
-            <Badge variant="staff">Staff Mode (Read-Only Catalog)</Badge>
+            <Badge variant="default" className="text-xs">Customer Mode (Browse Catalog)</Badge>
           )}
         </div>
       </div>
@@ -245,8 +245,8 @@ export const ProductsPage: React.FC = () => {
                   ? 'No products matched your active filters. Try adjusting your search query.'
                   : 'Your supermarket catalog is currently empty. Add your first product to begin.'
               }
-              actionLabel={isAdmin ? 'Add Product' : undefined}
-              onAction={isAdmin ? handleOpenCreate : undefined}
+              actionLabel={isStaff ? 'Add Product' : undefined}
+              onAction={isStaff ? handleOpenCreate : undefined}
               className="border-0 p-12"
             />
           ) : (
@@ -260,7 +260,7 @@ export const ProductsPage: React.FC = () => {
                   <th className="py-3 px-4 text-center">Discount Strategy</th>
                   <th className="py-3 px-4 text-right">Net Price</th>
                   <th className="py-3 px-4 text-center">Stock</th>
-                  {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
+                  {isStaff && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -355,8 +355,8 @@ export const ProductsPage: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Admin Actions */}
-                      {isAdmin && (
+                      {/* Staff Actions */}
+                      {isStaff && (
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
                             <button

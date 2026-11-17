@@ -43,7 +43,7 @@ This script:
 The application uses the canonical database location:
 $$\mathbf{backend/data/supermarket.db}$$
 
-The database already comes pre-seeded with **25 representative Indian retail products** across **7 categories** and an administrator account (`admin` / `admin123`). 
+The database already comes pre-seeded with **25 representative Indian retail products** across **7 categories** and a demonstration staff account (password: `admin123`).
 
 If you ever wish to re-seed or verify the database, run:
 ```powershell
@@ -88,10 +88,10 @@ From `Supermarket_Management_System/` in PowerShell:
    - Click **Complete Sale & Print**. Verify the instant modal receipt and stock decrement.
 4. **Stock Movement Audit Ledger (`/inventory`):**
    - Review the stock movement history table. Verify that the recent sale is recorded as an immutable `SALE` movement with negative quantity.
-5. **Unlock Admin Privileges:**
-   - In the top header, click **Unlock Admin**.
+5. **Authenticate Staff Mode:**
+   - In the top header or sidebar, click **Staff Login**.
    - Enter password: `admin123`.
-   - The UI activates Admin Mode (golden badge), unlocking product creation, brand/category management, and manual stock adjustments.
+   - The UI activates Staff Mode (purple badge), unlocking full operational dashboard analytics, product creation/editing, brand/category management, and manual stock adjustments.
 6. **OOP Concepts Explorer (`/oop-concepts`):**
    - Visit the interactive educational portal to explore class hierarchy diagrams, dynamic polymorphism simulations, object slicing demos, and code excerpts mapped directly to C++ source files.
 

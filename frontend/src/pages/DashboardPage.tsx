@@ -13,7 +13,6 @@ import {
   CreditCard,
   CheckCircle2,
   Calendar,
-  Lock,
   ShieldCheck,
   Code2,
   ChevronRight
@@ -32,7 +31,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useAuth } from '@/context/AuthContext';
-import { AdminUnlockModal } from '@/components/auth/AdminUnlockModal';
 import { InvoiceDetailModal } from '@/components/billing/InvoiceDetailModal';
 import { billService, BillSummary } from '@/services/billService';
 import { productService, ProductSummary } from '@/services/productService';
@@ -40,8 +38,7 @@ import { Invoice } from '@/types/billing';
 import { Product } from '@/types/catalog';
 
 export const DashboardPage: React.FC = () => {
-  const { role, isAdmin } = useAuth();
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const { role, isStaff } = useAuth();
   const [selectedBillId, setSelectedBillId] = useState<number | null>(null);
 
   // Operational Datasets
@@ -200,15 +197,15 @@ export const DashboardPage: React.FC = () => {
             <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-[#303631]">
               Dashboard Overview
             </h1>
-            <Badge variant={isAdmin ? 'admin' : 'staff'} className="text-[10px] sm:text-[11px] font-semibold py-0.5 px-2">
-              {isAdmin ? 'Administrator' : 'Staff Mode'}
+            <Badge variant="staff" className="text-[10px] sm:text-[11px] font-semibold py-0.5 px-2 bg-[#EEF5F0] text-[#285943] border border-[#C2D9C8]">
+              Staff Mode
             </Badge>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[#777D76] mt-0.5">
             <Calendar className="w-3.5 h-3.5 text-[#71836A] shrink-0" />
             <span>{currentFormattedDate}</span>
             <span>•</span>
-            <span>Active Role: <strong className="text-[#303631] font-semibold">{role}</strong></span>
+            <span>Active Role: <strong className="text-[#303631] font-semibold">{isStaff ? 'STAFF' : role}</strong></span>
           </div>
         </div>
 
@@ -232,25 +229,12 @@ export const DashboardPage: React.FC = () => {
               <span className="hidden sm:inline">Inventory</span>
             </Button>
           </Link>
-          {!isAdmin ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowUnlockModal(true)}
-              className="gap-1 text-xs text-[#303631] h-7 sm:h-8 px-2 sm:px-2.5 hover:text-[#285943]"
-              title="Unlock administrator privileges"
-            >
-              <Lock className="w-3 h-3 text-[#777D76]" />
-              <span className="hidden md:inline">Admin</span>
+          <Link to="/admin">
+            <Button variant="outline" size="sm" className="gap-1 text-xs h-7 sm:h-8 px-2 sm:px-2.5 hover:text-[#285943]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" />
+              <span className="hidden md:inline">Staff Hub</span>
             </Button>
-          ) : (
-            <Link to="/admin">
-              <Button variant="secondary" size="sm" className="gap-1 text-xs h-7 sm:h-8 px-2 sm:px-2.5 font-semibold">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#285943]" />
-                <span className="hidden md:inline">Admin Hub</span>
-              </Button>
-            </Link>
-          )}
+          </Link>
           <Button
             variant="ghost"
             size="sm"
@@ -685,11 +669,6 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Modals */}
-      <AdminUnlockModal
-        isOpen={showUnlockModal}
-        onClose={() => setShowUnlockModal(false)}
-      />
-
       <InvoiceDetailModal
         billId={selectedBillId}
         onClose={() => setSelectedBillId(null)}

@@ -1,9 +1,9 @@
-export type Role = 'STAFF' | 'ADMIN';
+export type Role = 'CUSTOMER' | 'STAFF';
 
 export interface UserSession {
   authenticated: boolean;
   role: Role;
-  canAdmin: boolean;
+  canAdmin?: boolean; // deprecated alias for isStaff
   username?: string;
   expiresAt?: number;
 }
