@@ -64,6 +64,9 @@ public:
             {"finalAmountPaise", b.finalAmountPaise},
             {"finalAmountInRupees", b.getFinalAmountInRupees()},
             {"createdAt", b.createdAt},
+            {"customerId", b.customerId.has_value() ? nlohmann::json(*b.customerId) : nlohmann::json(nullptr)},
+            {"customerName", b.customerName},
+            {"customerPhone", b.customerPhone},
             {"itemCount", b.items.size()},
             {"items", itemsArr}
         };
@@ -208,8 +211,16 @@ public:
                             domainBill.addItem(*product, quantity);
                         }
 
+                        // Parse optional customer ID
+                        std::optional<int> customerId = std::nullopt;
+                        if (body.contains("customerId") && !body["customerId"].is_null()) {
+                            if (body["customerId"].is_number_integer()) {
+                                customerId = body["customerId"].get<int>();
+                            }
+                        }
+
                         // Save Bill atomically to SQLite with stock deduction & snapshots
-                        int newBillId = billRepo.saveBill(billNumber, domainBill);
+                        int newBillId = billRepo.saveBill(billNumber, domainBill, customerId);
 
                         auto createdRecord = billRepo.findById(newBillId);
                         if (!createdRecord.has_value()) {

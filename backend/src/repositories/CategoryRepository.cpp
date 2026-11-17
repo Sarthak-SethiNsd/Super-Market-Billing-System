@@ -72,3 +72,51 @@ bool CategoryRepository::remove(int id) {
     stmt.execute();
     return db.getChanges() > 0;
 }
+
+std::vector<Brand> CategoryRepository::getBrands(int categoryId) {
+    std::vector<Brand> list;
+    PreparedStatement stmt(db, R"(
+        SELECT b.id, b.name, b.created_at
+        FROM brands b
+        JOIN category_brands cb ON b.id = cb.brand_id
+        WHERE cb.category_id = ?
+        ORDER BY b.name ASC;
+    )");
+    stmt.bind(1, categoryId);
+    while (stmt.step()) {
+        list.emplace_back(stmt.getInt(0), stmt.getString(1), stmt.getString(2));
+    }
+    return list;
+}
+
+bool CategoryRepository::addBrand(int categoryId, int brandId) {
+    PreparedStatement stmt(db, "INSERT OR IGNORE INTO category_brands (category_id, brand_id) VALUES (?, ?);");
+    stmt.bind(1, categoryId);
+    stmt.bind(2, brandId);
+    stmt.execute();
+    return db.getChanges() > 0;
+}
+
+bool CategoryRepository::removeBrand(int categoryId, int brandId) {
+    PreparedStatement stmt(db, "DELETE FROM category_brands WHERE category_id = ? AND brand_id = ?;");
+    stmt.bind(1, categoryId);
+    stmt.bind(2, brandId);
+    stmt.execute();
+    return db.getChanges() > 0;
+}
+
+bool CategoryRepository::hasBrand(int categoryId, int brandId) {
+    PreparedStatement stmt(db, "SELECT 1 FROM category_brands WHERE category_id = ? AND brand_id = ? LIMIT 1;");
+    stmt.bind(1, categoryId);
+    stmt.bind(2, brandId);
+    return stmt.step();
+}
+
+int CategoryRepository::getBrandCount(int categoryId) {
+    PreparedStatement stmt(db, "SELECT COUNT(*) FROM category_brands WHERE category_id = ?;");
+    stmt.bind(1, categoryId);
+    if (stmt.step()) {
+        return stmt.getInt(0);
+    }
+    return 0;
+}

@@ -19,9 +19,12 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Product } from '@/types/catalog';
 import { CartItem, Invoice } from '@/types/billing';
+import { Customer } from '@/types/customer';
 import { productService } from '@/services/productService';
 import { billService } from '@/services/billService';
+import { customerService } from '@/services/customerService';
 import { InvoiceReceiptModal } from '@/components/billing/InvoiceReceiptModal';
+import { Users, UserPlus, X } from 'lucide-react';
 
 export const BillingPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -36,6 +39,14 @@ export const BillingPage: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [successInvoice, setSuccessInvoice] = useState<Invoice | null>(null);
+
+  // Customer State
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false);
+  const [quickCustomerName, setQuickCustomerName] = useState('');
+  const [quickCustomerPhone, setQuickCustomerPhone] = useState('');
+  const [quickCustomerSubmitting, setQuickCustomerSubmitting] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -57,6 +68,19 @@ export const BillingPage: React.FC = () => {
       setIsLoadingProducts(false);
     }
   }, [searchQuery]);
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await customerService.getCustomers(100, 0);
+      setCustomers(res.data);
+    } catch {
+      // Non-fatal if customers fails to load
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -180,10 +204,20 @@ export const BillingPage: React.FC = () => {
         quantity: item.quantity,
       }));
 
-      const invoice = await billService.checkout(items);
+      const selectedCust = customers.find((c) => c.id === selectedCustomerId);
+      const customerDetails = selectedCust
+        ? {
+            customerId: selectedCust.id,
+            customerName: selectedCust.fullName,
+            customerPhone: selectedCust.phone,
+          }
+        : undefined;
+
+      const invoice = await billService.checkout(items, undefined, customerDetails);
       setSuccessInvoice(invoice);
       setCart([]);
       fetchProducts(); // Refresh live stock counts
+      fetchCustomers(); // Refresh customer stats
     } catch (err: unknown) {
       if (err instanceof Error) {
         setCheckoutError(err.message);
@@ -192,6 +226,28 @@ export const BillingPage: React.FC = () => {
       }
     } finally {
       setIsCheckingOut(false);
+    }
+  };
+
+  const handleQuickAddCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickCustomerName.trim()) return;
+    setQuickCustomerSubmitting(true);
+    try {
+      const newCust = await customerService.createCustomer({
+        fullName: quickCustomerName.trim(),
+        phone: quickCustomerPhone.trim(),
+        email: '',
+      });
+      setCustomers((prev) => [newCust, ...prev]);
+      setSelectedCustomerId(newCust.id);
+      setShowQuickAddCustomer(false);
+      setQuickCustomerName('');
+      setQuickCustomerPhone('');
+    } catch (err: unknown) {
+      setCheckoutError(err instanceof Error ? err.message : 'Failed to register customer');
+    } finally {
+      setQuickCustomerSubmitting(false);
     }
   };
 
@@ -401,6 +457,98 @@ export const BillingPage: React.FC = () => {
                 </button>
               )}
             </CardHeader>
+
+            {/* Customer Attachment Bar */}
+            <div className="bg-[#FAF8F5] border-b border-[#E5E4DC] p-3 text-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-semibold text-[#303631] flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-[#285943]" />
+                  <span>Customer Profile:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddCustomer(!showQuickAddCustomer)}
+                  className="text-[11px] font-semibold text-[#285943] hover:underline flex items-center gap-1"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span>+ Quick Add</span>
+                </button>
+              </div>
+
+              {showQuickAddCustomer ? (
+                <form onSubmit={handleQuickAddCustomer} className="p-2.5 bg-white rounded-lg border border-[#E5E4DC] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#303631]">Register Customer</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAddCustomer(false)}
+                      className="text-[#777D76] hover:text-[#303631]"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Customer Name *"
+                    value={quickCustomerName}
+                    onChange={(e) => setQuickCustomerName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs border border-[#E5E4DC] rounded outline-none focus:border-[#285943]"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone (optional)"
+                    value={quickCustomerPhone}
+                    onChange={(e) => setQuickCustomerPhone(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs border border-[#E5E4DC] rounded outline-none focus:border-[#285943]"
+                  />
+                  <div className="flex justify-end gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAddCustomer(false)}
+                      className="px-2 py-1 text-[11px] border border-[#E5E4DC] rounded text-[#777D76]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={quickCustomerSubmitting}
+                      className="px-2.5 py-1 text-[11px] bg-[#285943] text-white rounded font-semibold"
+                    >
+                      {quickCustomerSubmitting ? 'Saving...' : 'Attach Customer'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedCustomerId || ''}
+                    onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full px-2.5 py-1.5 rounded border border-[#E5E4DC] bg-white text-xs text-[#303631] outline-none focus:border-[#285943]"
+                  >
+                    <option value="">Walk-in Customer (Guest / Anonymous)</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.fullName} ({c.customerCode}) {c.phone ? `• ${c.phone}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {selectedCustomerId && !showQuickAddCustomer && (
+                <div className="mt-1.5 text-[11px] text-[#71836A] flex items-center justify-between">
+                  <span>Linked: <strong className="text-[#285943]">{customers.find((c) => c.id === selectedCustomerId)?.fullName}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCustomerId(null)}
+                    className="text-[#A63A38] hover:underline"
+                  >
+                    Detach
+                  </button>
+                </div>
+              )}
+            </div>
 
             <CardContent className="p-0 flex-1 overflow-y-auto max-h-[380px]">
               {checkoutError && (

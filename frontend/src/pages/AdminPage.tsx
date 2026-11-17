@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { BrandManager } from '@/components/admin/BrandManager';
 import { CategoryManager } from '@/components/admin/CategoryManager';
+import { CategoryBrandManager } from '@/components/admin/CategoryBrandManager';
+import { CustomerManager } from '@/components/admin/CustomerManager';
 import { AdminUnlockModal } from '@/components/auth/AdminUnlockModal';
 import {
   ShieldAlert,
@@ -23,13 +25,22 @@ import {
   ArrowRight,
   Layers,
   Tag,
-  Shield
+  Shield,
+  Users,
+  Link2
 } from 'lucide-react';
 
 export const AdminPage: React.FC = () => {
   const { isAdmin, username, clearAdminSession } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'hub' | 'brands' | 'categories' | 'security'>('hub');
+  const [activeTab, setActiveTab] = useState<'hub' | 'customers' | 'brands' | 'categories' | 'category-brands' | 'security'>('hub');
+
+  // Automatically lock Admin Panel whenever user navigates away from Admin Hub
+  useEffect(() => {
+    return () => {
+      clearAdminSession();
+    };
+  }, [clearAdminSession]);
 
   const adminModules = [
     {
@@ -174,6 +185,19 @@ export const AdminPage: React.FC = () => {
 
         <button
           type="button"
+          onClick={() => setActiveTab('customers')}
+          className={`px-3.5 py-1.5 text-xs font-bold rounded transition-colors flex items-center gap-1.5 ${
+            activeTab === 'customers'
+              ? 'bg-[#285943] text-white shadow-xs'
+              : 'text-[#777D76] hover:text-[#303631] hover:bg-white'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Customer Directory</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('brands')}
           className={`px-3.5 py-1.5 text-xs font-bold rounded transition-colors flex items-center gap-1.5 ${
             activeTab === 'brands'
@@ -196,6 +220,19 @@ export const AdminPage: React.FC = () => {
         >
           <Package className="w-3.5 h-3.5" />
           <span>Category Manager</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('category-brands')}
+          className={`px-3.5 py-1.5 text-xs font-bold rounded transition-colors flex items-center gap-1.5 ${
+            activeTab === 'category-brands'
+              ? 'bg-[#285943] text-white shadow-xs'
+              : 'text-[#777D76] hover:text-[#303631] hover:bg-white'
+          }`}
+        >
+          <Link2 className="w-3.5 h-3.5" />
+          <span>Category-Brand Matrix</span>
         </button>
 
         <button
@@ -286,10 +323,24 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
+      {/* Tab: Customer Manager */}
+      {activeTab === 'customers' && (
+        <div className="space-y-4">
+          <CustomerManager />
+        </div>
+      )}
+
       {/* Tab 3: Category Manager */}
       {activeTab === 'categories' && (
         <div className="space-y-4">
           <CategoryManager />
+        </div>
+      )}
+
+      {/* Tab: Category-Brand Associations (Stage 10L) */}
+      {activeTab === 'category-brands' && (
+        <div className="space-y-4">
+          <CategoryBrandManager />
         </div>
       )}
 

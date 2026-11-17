@@ -264,7 +264,12 @@ export const TransactionsPage: React.FC = () => {
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900 group-hover:text-indigo-600 whitespace-nowrap">
-                      {b.billNumber}
+                      <div>{b.billNumber}</div>
+                      {b.customerName && (
+                        <div className="text-[10px] font-sans font-normal text-emerald-700">
+                          {b.customerName}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">

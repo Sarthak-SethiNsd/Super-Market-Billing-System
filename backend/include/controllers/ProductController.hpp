@@ -193,6 +193,13 @@ public:
         throw std::invalid_argument("Invalid productType. Expected PERISHABLE or NON_PERISHABLE");
     }
 
+    static bool isValidThreeDigitCode(const std::string& code) {
+        if (code.size() != 3) return false;
+        return std::isdigit(static_cast<unsigned char>(code[0])) &&
+               std::isdigit(static_cast<unsigned char>(code[1])) &&
+               std::isdigit(static_cast<unsigned char>(code[2]));
+    }
+
     static void registerRoutes(ControllerUtils::CrowApp& app, DatabaseConnection& db, AuthService& auth, const std::string& allowedOrigin) {
         // GET /api/products & POST /api/products
         CROW_ROUTE(app, "/api/products").methods("GET"_method, "POST"_method, "OPTIONS"_method)(
@@ -282,15 +289,37 @@ public:
                         if (sku.empty() || sku.size() > 64) {
                             return ControllerUtils::errorResponse(400, "Product SKU must be between 1 and 64 characters", allowedOrigin);
                         }
+                        if (!isValidThreeDigitCode(sku)) {
+                            return ControllerUtils::errorResponse(400, "Product code must contain exactly three numeric digits (e.g. 001, 025, 999)", allowedOrigin);
+                        }
 
                         std::string fieldErr;
+                        BrandRepository brandRepo(db);
                         int brandId = 0;
-                        int categoryId = 0;
-                        if (!body.contains("brandId") || !ControllerUtils::parseStrictIntField(body, "brandId", 1, 1000000000, brandId, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, "A valid positive integer brandId is required", allowedOrigin);
+
+                        if (body.contains("brandName") && body["brandName"].is_string()) {
+                            std::string bName = ControllerUtils::trimCopy(body["brandName"].get<std::string>());
+                            if (bName.empty()) {
+                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
+                            }
+                            brandId = brandRepo.getOrCreate(bName);
+                        } else if (body.contains("brand") && body["brand"].is_string()) {
+                            std::string bName = ControllerUtils::trimCopy(body["brand"].get<std::string>());
+                            if (bName.empty()) {
+                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
+                            }
+                            brandId = brandRepo.getOrCreate(bName);
+                        } else if (body.contains("brandId") && ControllerUtils::parseStrictIntField(body, "brandId", 1, 1000000000, brandId, fieldErr)) {
+                            if (!brandRepo.findById(brandId).has_value()) {
+                                return ControllerUtils::errorResponse(400, "Referenced brandId does not exist", allowedOrigin);
+                            }
+                        } else {
+                            return ControllerUtils::errorResponse(400, "Brand is required", allowedOrigin);
                         }
+
+                        int categoryId = 0;
                         if (!body.contains("categoryId") || !ControllerUtils::parseStrictIntField(body, "categoryId", 1, 1000000000, categoryId, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, "A valid positive integer categoryId is required", allowedOrigin);
+                            return ControllerUtils::errorResponse(400, "A valid category must be selected", allowedOrigin);
                         }
 
                         int stock = 0;
@@ -325,13 +354,12 @@ public:
                             return ControllerUtils::errorResponse(409, "A product with this SKU already exists", allowedOrigin);
                         }
 
-                        BrandRepository brandRepo(db);
-                        if (!brandRepo.findById(brandId).has_value()) {
-                            return ControllerUtils::errorResponse(400, "Referenced brandId does not exist", allowedOrigin);
-                        }
                         CategoryRepository catRepo(db);
                         if (!catRepo.findById(categoryId).has_value()) {
                             return ControllerUtils::errorResponse(400, "Referenced categoryId does not exist", allowedOrigin);
+                        }
+                        if (!catRepo.hasBrand(categoryId, brandId)) {
+                            return ControllerUtils::errorResponse(400, "The selected brand is not associated with the selected category", allowedOrigin);
                         }
 
                         int newId = 0;
@@ -435,7 +463,16 @@ public:
                             if (!body["sku"].is_string()) {
                                 return ControllerUtils::errorResponse(400, "Field 'sku' must be a string", allowedOrigin);
                             }
-                            sku = ControllerUtils::trimCopy(body["sku"].get<std::string>());
+                            std::string inputSku = ControllerUtils::trimCopy(body["sku"].get<std::string>());
+                            if (inputSku != p->getSku()) {
+                                if (!isValidThreeDigitCode(inputSku)) {
+                                    return ControllerUtils::errorResponse(400, "Product code must contain exactly three numeric digits (e.g. 001, 025, 999)", allowedOrigin);
+                                }
+                                if (repo.findBySku(inputSku).has_value()) {
+                                    return ControllerUtils::errorResponse(409, "A product with this SKU already exists", allowedOrigin);
+                                }
+                                sku = inputSku;
+                            }
                         }
                         std::string name = p->getName();
                         if (body.contains("name")) {
@@ -447,24 +484,44 @@ public:
                         if (name.empty() || name.size() > 200 || sku.empty() || sku.size() > 64) {
                             return ControllerUtils::errorResponse(400, "Product name (1-200 chars) and SKU (1-64 chars) are invalid", allowedOrigin);
                         }
-                        if (sku != p->getSku() && repo.findBySku(sku).has_value()) {
-                            return ControllerUtils::errorResponse(409, "A product with this SKU already exists", allowedOrigin);
-                        }
 
                         std::string fieldErr;
+                        BrandRepository brandRepo(db);
                         int brandId = p->getBrandId();
-                        if (body.contains("brandId") && !ControllerUtils::parseStrictIntField(body, "brandId", 1, 1000000000, brandId, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                        if (body.contains("brandName") && body["brandName"].is_string()) {
+                            std::string bName = ControllerUtils::trimCopy(body["brandName"].get<std::string>());
+                            if (bName.empty()) {
+                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
+                            }
+                            brandId = brandRepo.getOrCreate(bName);
+                        } else if (body.contains("brand") && body["brand"].is_string()) {
+                            std::string bName = ControllerUtils::trimCopy(body["brand"].get<std::string>());
+                            if (bName.empty()) {
+                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
+                            }
+                            brandId = brandRepo.getOrCreate(bName);
+                        } else if (body.contains("brandId")) {
+                            if (!ControllerUtils::parseStrictIntField(body, "brandId", 1, 1000000000, brandId, fieldErr)) {
+                                return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                            }
+                            if (!brandRepo.findById(brandId).has_value()) {
+                                return ControllerUtils::errorResponse(400, "Referenced brandId does not exist", allowedOrigin);
+                            }
                         }
+
                         int categoryId = p->getCategoryId();
-                        if (body.contains("categoryId") && !ControllerUtils::parseStrictIntField(body, "categoryId", 1, 1000000000, categoryId, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                        if (body.contains("categoryId")) {
+                            if (!ControllerUtils::parseStrictIntField(body, "categoryId", 1, 1000000000, categoryId, fieldErr)) {
+                                return ControllerUtils::errorResponse(400, "A valid category must be selected", allowedOrigin);
+                            }
                         }
-                        if (!BrandRepository(db).findById(brandId).has_value()) {
-                            return ControllerUtils::errorResponse(400, "Referenced brandId does not exist", allowedOrigin);
-                        }
-                        if (!CategoryRepository(db).findById(categoryId).has_value()) {
+
+                        CategoryRepository catRepo(db);
+                        if (!catRepo.findById(categoryId).has_value()) {
                             return ControllerUtils::errorResponse(400, "Referenced categoryId does not exist", allowedOrigin);
+                        }
+                        if (!catRepo.hasBrand(categoryId, brandId)) {
+                            return ControllerUtils::errorResponse(400, "The selected brand is not associated with the selected category", allowedOrigin);
                         }
 
                         int stock = p->getStock();

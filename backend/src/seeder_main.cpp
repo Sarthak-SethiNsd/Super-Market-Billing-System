@@ -7,6 +7,7 @@
 
 #include "database/DatabaseConnection.hpp"
 #include "database/DatabaseMigrator.hpp"
+#include "database/DemoDataSeeder.hpp"
 #include "database/Transaction.hpp"
 #include "repositories/BrandRepository.hpp"
 #include "repositories/CategoryRepository.hpp"
@@ -123,6 +124,7 @@ int main(int argc, char* argv[]) {
 
         DatabaseConnection db(dbPath);
         DatabaseMigrator::migrate(db);
+        DemoDataSeeder::seedIfEmpty(db);
 
         // Ensure default administrative user exists
         UserRepository userRepo(db);

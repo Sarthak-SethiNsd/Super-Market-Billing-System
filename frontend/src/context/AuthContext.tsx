@@ -56,13 +56,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession();
   }, [refreshSession]);
 
-  const setAdminToken = async (newToken: string) => {
+  const setAdminToken = useCallback(async (newToken: string) => {
     localStorage.setItem('sms_admin_token', newToken);
     setToken(newToken);
     await refreshSession();
-  };
+  }, [refreshSession]);
 
-  const clearAdminSession = async () => {
+  const clearAdminSession = useCallback(async () => {
     try {
       if (token) {
         await authService.logout();
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(null);
       setSession(defaultSession);
     }
-  };
+  }, [token]);
 
   return (
     <AuthContext.Provider

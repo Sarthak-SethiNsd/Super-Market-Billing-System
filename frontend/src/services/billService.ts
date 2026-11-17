@@ -10,6 +10,9 @@ export interface CheckoutItemRequest {
 export interface CheckoutRequest {
   items: CheckoutItemRequest[];
   billNumber?: string;
+  customerId?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
 }
 
 export interface BillSummary {
@@ -24,9 +27,16 @@ export interface BillSummary {
 }
 
 export const billService = {
-  async checkout(items: CheckoutItemRequest[], billNumber?: string): Promise<Invoice> {
+  async checkout(
+    items: CheckoutItemRequest[],
+    billNumber?: string,
+    customerDetails?: { customerId?: number | null; customerName?: string | null; customerPhone?: string | null }
+  ): Promise<Invoice> {
     const payload: CheckoutRequest = { items };
     if (billNumber) payload.billNumber = billNumber;
+    if (customerDetails?.customerId) payload.customerId = customerDetails.customerId;
+    if (customerDetails?.customerName) payload.customerName = customerDetails.customerName;
+    if (customerDetails?.customerPhone) payload.customerPhone = customerDetails.customerPhone;
 
     const res = await apiClient.post<ApiResponse<Invoice>>('/api/bills', payload);
     return res.data.data;

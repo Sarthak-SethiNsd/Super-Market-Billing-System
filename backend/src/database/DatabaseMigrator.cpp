@@ -150,5 +150,108 @@ void DatabaseMigrator::migrate(DatabaseConnection& conn) {
 
         tx.commit();
         setVersion(conn, 2);
+        currentVersion = 2;
+    }
+
+    if (currentVersion < 3) {
+        Transaction tx(conn);
+
+        // 9. Customers Table (Stage 10I)
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS customers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_code TEXT NOT NULL UNIQUE,
+                full_name TEXT NOT NULL,
+                phone TEXT,
+                email TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        )");
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_customers_code ON customers(customer_code);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(full_name);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);");
+
+        // 10. Evolve Bills Table to link customers with historical snapshot columns
+        conn.execute("ALTER TABLE bills ADD COLUMN customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;");
+        conn.execute("ALTER TABLE bills ADD COLUMN customer_name TEXT;");
+        conn.execute("ALTER TABLE bills ADD COLUMN customer_phone TEXT;");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_bills_customer ON bills(customer_id);");
+
+        // 11. System Metadata Table for Idempotent Seed Tracking
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS system_metadata (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        )");
+
+        tx.commit();
+        setVersion(conn, 3);
+        currentVersion = 3;
+    }
+
+    if (currentVersion < 4) {
+        Transaction tx(conn);
+
+        // 12. Category-Brands Junction Table (Stage 10L)
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS category_brands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER NOT NULL,
+                brand_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+                FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE,
+                UNIQUE(category_id, brand_id)
+            );
+        )");
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_category_brands_category ON category_brands(category_id);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_category_brands_brand ON category_brands(brand_id);");
+
+        // Seed existing associations from current products
+        conn.execute(R"(
+            INSERT OR IGNORE INTO category_brands (category_id, brand_id)
+            SELECT DISTINCT category_id, brand_id FROM products WHERE category_id IS NOT NULL AND brand_id IS NOT NULL;
+        )");
+
+        // Ensure demonstration categories (expanding taxonomy to 10 categories)
+        conn.execute("INSERT OR IGNORE INTO categories (name) VALUES ('Milk');");
+        conn.execute("INSERT OR IGNORE INTO categories (name) VALUES ('Peas');");
+        conn.execute("INSERT OR IGNORE INTO categories (name) VALUES ('Bakery & Breads');");
+
+        // Ensure demonstration brands
+        conn.execute("INSERT OR IGNORE INTO brands (name) VALUES ('Safal');");
+        conn.execute("INSERT OR IGNORE INTO brands (name) VALUES ('ITC Master Chef');");
+        conn.execute("INSERT OR IGNORE INTO brands (name) VALUES ('Godrej Yummiez');");
+
+        // Associate Milk (4 brands: Amul, Mother Dairy, Pure Organics, Britannia)
+        conn.execute(R"(
+            INSERT OR IGNORE INTO category_brands (category_id, brand_id)
+            SELECT c.id, b.id FROM categories c, brands b
+            WHERE c.name = 'Milk' AND b.name IN ('Amul', 'Mother Dairy', 'Pure Organics', 'Britannia');
+        )");
+
+        // Associate Peas (5 brands: Safal, Fresh Farm Direct, Mother Dairy, ITC Master Chef, Godrej Yummiez)
+        conn.execute(R"(
+            INSERT OR IGNORE INTO category_brands (category_id, brand_id)
+            SELECT c.id, b.id FROM categories c, brands b
+            WHERE c.name = 'Peas' AND b.name IN ('Safal', 'Fresh Farm Direct', 'Mother Dairy', 'ITC Master Chef', 'Godrej Yummiez');
+        )");
+
+        // Associate Bakery & Breads (2 brands: Britannia, Parle)
+        conn.execute(R"(
+            INSERT OR IGNORE INTO category_brands (category_id, brand_id)
+            SELECT c.id, b.id FROM categories c, brands b
+            WHERE c.name = 'Bakery & Breads' AND b.name IN ('Britannia', 'Parle');
+        )");
+
+        tx.commit();
+        setVersion(conn, 4);
+        currentVersion = 4;
     }
 }

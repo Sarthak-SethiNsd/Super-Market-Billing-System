@@ -13,6 +13,7 @@
 #include "server/ServerConfig.hpp"
 #include "database/DatabaseConnection.hpp"
 #include "database/DatabaseMigrator.hpp"
+#include "database/DemoDataSeeder.hpp"
 #include "auth/AuthService.hpp"
 #include "controllers/HealthController.hpp"
 #include "controllers/AuthController.hpp"
@@ -21,6 +22,7 @@
 #include "controllers/ProductController.hpp"
 #include "controllers/InventoryController.hpp"
 #include "controllers/BillController.hpp"
+#include "controllers/CustomerController.hpp"
 #include <memory>
 #include <iostream>
 
@@ -39,12 +41,16 @@ private:
         ProductController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         InventoryController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         BillController::registerRoutes(app, *dbConnection, config.allowedOrigin);
+        CustomerController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
     }
 
 public:
     explicit AppServer(const ServerConfig& cfg) : config(cfg) {
         dbConnection = std::make_unique<DatabaseConnection>(config.dbPath);
         DatabaseMigrator::migrate(*dbConnection);
+        if (config.autoSeedDemoData) {
+            DemoDataSeeder::seedIfEmpty(*dbConnection);
+        }
 
         authService = std::make_unique<AuthService>(*dbConnection, config.sessionDurationSeconds);
         authService->initializeAdminFromEnv("ADMIN_INITIAL_PASSWORD");

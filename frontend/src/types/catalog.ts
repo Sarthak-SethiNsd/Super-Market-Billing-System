@@ -49,6 +49,7 @@ export interface ProductListResponse {
 export interface ProductFormData {
   sku: string;
   name: string;
+  brandName?: string;
   brandId: number;
   categoryId: number;
   productType: ProductType;

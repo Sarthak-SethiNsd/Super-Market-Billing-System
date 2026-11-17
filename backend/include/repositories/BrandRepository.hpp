@@ -1,5 +1,6 @@
 #pragma once
 #include "models/Brand.hpp"
+#include "models/Category.hpp"
 #include <vector>
 #include <optional>
 #include <string>
@@ -14,10 +15,15 @@ public:
     explicit BrandRepository(DatabaseConnection& conn) : db(conn) {}
 
     int insert(const std::string& name);
+    int getOrCreate(const std::string& name);
     std::optional<Brand> findById(int id);
     std::optional<Brand> findByName(const std::string& name);
     std::vector<Brand> getAll();
     bool update(int id, const std::string& newName);
     bool remove(int id);
     int getProductCount(int brandId);
+
+    // Category-Brand relationship methods (Stage 10L)
+    std::vector<Category> getCategories(int brandId);
+    bool isAssociatedWithCategory(int brandId, int categoryId);
 };

@@ -9,9 +9,11 @@ struct ServerConfig {
     std::string allowedOrigin = "*";
     std::string dbPath = "data/supermarket.db";
     int sessionDurationSeconds = 3600;
+    bool autoSeedDemoData = false;
 
     static ServerConfig loadFromEnvironment() {
         ServerConfig cfg;
+        cfg.autoSeedDemoData = true;
 
         const char* p = std::getenv("PORT");
         if (p) {

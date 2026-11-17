@@ -14,6 +14,35 @@ int BrandRepository::insert(const std::string& name) {
     return static_cast<int>(db.getLastInsertRowId());
 }
 
+int BrandRepository::getOrCreate(const std::string& rawName) {
+    size_t first = rawName.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) {
+        throw std::invalid_argument("Brand name cannot be empty");
+    }
+    size_t last = rawName.find_last_not_of(" \t\r\n");
+    std::string trimmed = rawName.substr(first, (last - first + 1));
+
+    // Case-insensitive & trimmed search in database
+    PreparedStatement stmt(db, "SELECT id, name FROM brands WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;");
+    stmt.bind(1, trimmed);
+    if (stmt.step()) {
+        return stmt.getInt(0); // reuse existing brand ID!
+    }
+
+    // Not found: insert safely
+    try {
+        return insert(trimmed);
+    } catch (...) {
+        // Fallback retry if inserted concurrently
+        PreparedStatement retry(db, "SELECT id, name FROM brands WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) LIMIT 1;");
+        retry.bind(1, trimmed);
+        if (retry.step()) {
+            return retry.getInt(0);
+        }
+        throw;
+    }
+}
+
 std::optional<Brand> BrandRepository::findById(int id) {
     PreparedStatement stmt(db, "SELECT id, name, created_at FROM brands WHERE id = ?;");
     stmt.bind(1, id);
@@ -71,4 +100,27 @@ bool BrandRepository::remove(int id) {
     stmt.bind(1, id);
     stmt.execute();
     return db.getChanges() > 0;
+}
+
+std::vector<Category> BrandRepository::getCategories(int brandId) {
+    std::vector<Category> list;
+    PreparedStatement stmt(db, R"(
+        SELECT c.id, c.name, c.created_at
+        FROM categories c
+        JOIN category_brands cb ON c.id = cb.category_id
+        WHERE cb.brand_id = ?
+        ORDER BY c.name ASC;
+    )");
+    stmt.bind(1, brandId);
+    while (stmt.step()) {
+        list.emplace_back(stmt.getInt(0), stmt.getString(1), stmt.getString(2));
+    }
+    return list;
+}
+
+bool BrandRepository::isAssociatedWithCategory(int brandId, int categoryId) {
+    PreparedStatement stmt(db, "SELECT 1 FROM category_brands WHERE brand_id = ? AND category_id = ? LIMIT 1;");
+    stmt.bind(1, brandId);
+    stmt.bind(2, categoryId);
+    return stmt.step();
 }

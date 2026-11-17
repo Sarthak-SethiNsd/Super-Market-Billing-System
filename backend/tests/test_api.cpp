@@ -164,6 +164,18 @@ int main() {
                 catId = jCat["data"]["id"].get<int>();
                 TEST_ASSERT(catId > 0);
 
+                // Associate Brand with Category (Stage 10L)
+                nlohmann::json assocBody = {{"brandId", brandId}};
+                auto resAssoc = makeRequest(server, "POST", "/api/categories/" + std::to_string(catId) + "/brands", assocBody.dump(), adminToken);
+                TEST_ASSERT(resAssoc.code == 201);
+
+                // Fetch brands for this category (Stage 10L)
+                auto resCatBrands = makeRequest(server, "GET", "/api/categories/" + std::to_string(catId) + "/brands");
+                TEST_ASSERT(resCatBrands.code == 200);
+                auto jCatBrands = nlohmann::json::parse(resCatBrands.body);
+                TEST_ASSERT(jCatBrands["data"].size() == 1);
+                TEST_ASSERT(jCatBrands["data"][0]["id"] == brandId);
+
                 // Read all brands as staff/anonymous (publicly viewable)
                 auto resGetBrands = makeRequest(server, "GET", "/api/brands");
                 TEST_ASSERT(resGetBrands.code == 200);
@@ -176,8 +188,30 @@ int main() {
             // 5. Product CRUD & Discount Support (Admin creation, Staff view)
             std::cout << "[RUNNING] 5. Product Creation & Filtering...\n";
             {
-                nlohmann::json newProd = {
+                // Reject invalid non-3-digit SKU (Stage 10L)
+                nlohmann::json badSkuProd = {
                     {"sku", "GRAIN-001"},
+                    {"name", "Invalid SKU Product"},
+                    {"brandId", brandId},
+                    {"categoryId", catId},
+                    {"priceInPaise", 45000}
+                };
+                auto resBadSku = makeRequest(server, "POST", "/api/products", badSkuProd.dump(), adminToken);
+                TEST_ASSERT(resBadSku.code == 400);
+
+                // Reject unassociated brand-category pair (Stage 10L)
+                nlohmann::json unassocProd = {
+                    {"sku", "001"},
+                    {"name", "Unassociated Brand Product"},
+                    {"brandId", 999},
+                    {"categoryId", catId},
+                    {"priceInPaise", 45000}
+                };
+                auto resUnassoc = makeRequest(server, "POST", "/api/products", unassocProd.dump(), adminToken);
+                TEST_ASSERT(resUnassoc.code == 400);
+
+                nlohmann::json newProd = {
+                    {"sku", "001"},
                     {"name", "Organic Quinoa 1kg"},
                     {"brandId", brandId},
                     {"categoryId", catId},
@@ -202,11 +236,11 @@ int main() {
                 TEST_ASSERT(resList.code == 200);
                 auto jList = nlohmann::json::parse(resList.body);
                 TEST_ASSERT(jList["data"]["products"].size() == 1);
-                TEST_ASSERT(jList["data"]["products"][0]["sku"] == "GRAIN-001");
+                TEST_ASSERT(jList["data"]["products"][0]["sku"] == "001");
 
                 // Update product (Admin)
                 nlohmann::json updateProd = {
-                    {"sku", "GRAIN-001"},
+                    {"sku", "001"},
                     {"name", "Organic Royal White Quinoa 1kg"},
                     {"brandId", brandId},
                     {"categoryId", catId},
@@ -311,7 +345,7 @@ int main() {
             {
                 // Alter the product in catalog: rename, change price to Rs 999.00, remove discount
                 nlohmann::json alterReq = {
-                    {"sku", "SKU-ALTERED-001"},
+                    {"sku", "002"},
                     {"name", "Completely Altered Quinoa Name"},
                     {"brandId", brandId},
                     {"categoryId", catId},
@@ -391,7 +425,7 @@ int main() {
             {
                 // Create a fresh active product for inventory movement tests
                 nlohmann::json newProdReq = {
-                    {"sku", "SKU-AUDIT-MILK"},
+                    {"sku", "003"},
                     {"name", "Audit Farm Fresh Milk 1L"},
                     {"brandId", brandId},
                     {"categoryId", catId},

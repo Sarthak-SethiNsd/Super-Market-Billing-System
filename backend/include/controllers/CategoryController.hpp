@@ -1,6 +1,7 @@
 #pragma once
 #include "controllers/ControllerUtils.hpp"
 #include "repositories/CategoryRepository.hpp"
+#include "repositories/BrandRepository.hpp"
 #include "auth/AuthService.hpp"
 
 class CategoryController {
@@ -133,6 +134,114 @@ public:
                 }
 
                 return ControllerUtils::errorResponse(405, "Method Not Allowed", allowedOrigin);
+            }
+        );
+
+        // GET /api/categories/{id}/brands & POST /api/categories/{id}/brands (Stage 10L)
+        CROW_ROUTE(app, "/api/categories/<int>/brands").methods("GET"_method, "POST"_method, "OPTIONS"_method)(
+            [&db, &auth, allowedOrigin](const crow::request& req, int categoryId) {
+                if (req.method == "OPTIONS"_method) {
+                    return ControllerUtils::corsPreflight(allowedOrigin);
+                }
+
+                CategoryRepository repo(db);
+                auto cat = repo.findById(categoryId);
+                if (!cat.has_value()) {
+                    return ControllerUtils::errorResponse(404, "Category not found", allowedOrigin);
+                }
+
+                if (req.method == "GET"_method) {
+                    auto brands = repo.getBrands(categoryId);
+                    BrandRepository brandRepo(db);
+                    nlohmann::json list = nlohmann::json::array();
+                    for (const auto& b : brands) {
+                        list.push_back({
+                            {"id", b.id},
+                            {"name", b.name},
+                            {"createdAt", b.createdAt},
+                            {"productCount", brandRepo.getProductCount(b.id)}
+                        });
+                    }
+                    return ControllerUtils::successResponse(list, "Category brands retrieved", allowedOrigin);
+                }
+
+                if (req.method == "POST"_method) {
+                    crow::response err;
+                    if (!ControllerUtils::requireAdmin(req, auth, allowedOrigin, err)) {
+                        return err;
+                    }
+
+                    try {
+                        nlohmann::json body;
+                        crow::response parseErr;
+                        if (!ControllerUtils::parseJsonObject(req, body, allowedOrigin, parseErr)) {
+                            return parseErr;
+                        }
+
+                        BrandRepository brandRepo(db);
+                        int brandId = 0;
+                        std::string brandName = "";
+
+                        if (body.contains("brandName") && body["brandName"].is_string()) {
+                            brandName = ControllerUtils::trimCopy(body["brandName"].get<std::string>());
+                            if (brandName.empty()) {
+                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
+                            }
+                            brandId = brandRepo.getOrCreate(brandName);
+                        } else if (body.contains("brandId") && body["brandId"].is_number_integer()) {
+                            brandId = body["brandId"].get<int>();
+                            auto existingBrand = brandRepo.findById(brandId);
+                            if (!existingBrand.has_value()) {
+                                return ControllerUtils::errorResponse(404, "Brand not found", allowedOrigin);
+                            }
+                            brandName = existingBrand->name;
+                        } else {
+                            return ControllerUtils::errorResponse(400, "Either brandId or brandName is required", allowedOrigin);
+                        }
+
+                        repo.addBrand(categoryId, brandId);
+                        nlohmann::json data = {
+                            {"categoryId", categoryId},
+                            {"brandId", brandId},
+                            {"brandName", brandName}
+                        };
+                        return ControllerUtils::successResponse(data, "Brand associated with category successfully", allowedOrigin, 201);
+                    } catch (const nlohmann::json::exception&) {
+                        return ControllerUtils::errorResponse(400, "Invalid JSON request", allowedOrigin);
+                    } catch (const std::exception& e) {
+                        return ControllerUtils::errorResponse(500, "Failed to associate brand: " + std::string(e.what()), allowedOrigin);
+                    }
+                }
+
+                return ControllerUtils::errorResponse(405, "Method Not Allowed", allowedOrigin);
+            }
+        );
+
+        // DELETE /api/categories/{id}/brands/{brandId} (Stage 10L)
+        CROW_ROUTE(app, "/api/categories/<int>/brands/<int>").methods("DELETE"_method, "OPTIONS"_method)(
+            [&db, &auth, allowedOrigin](const crow::request& req, int categoryId, int brandId) {
+                if (req.method == "OPTIONS"_method) {
+                    return ControllerUtils::corsPreflight(allowedOrigin);
+                }
+
+                crow::response err;
+                if (!ControllerUtils::requireAdmin(req, auth, allowedOrigin, err)) {
+                    return err;
+                }
+
+                CategoryRepository repo(db);
+                auto cat = repo.findById(categoryId);
+                if (!cat.has_value()) {
+                    return ControllerUtils::errorResponse(404, "Category not found", allowedOrigin);
+                }
+
+                bool removed = repo.removeBrand(categoryId, brandId);
+                nlohmann::json data = {
+                    {"categoryId", categoryId},
+                    {"brandId", brandId},
+                    {"removed", removed}
+                };
+                return ControllerUtils::successResponse(data, "Brand association removed from category", allowedOrigin);
             }
         );
     }

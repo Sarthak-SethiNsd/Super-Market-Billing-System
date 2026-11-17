@@ -36,7 +36,7 @@ std::vector<BillItemRecord> BillRepository::getItemsForBill(int billId) {
     return list;
 }
 
-int BillRepository::saveBill(const std::string& billNumber, const Bill& bill) {
+int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId) {
     if (bill.isEmpty()) {
         throw std::invalid_argument("Cannot save an empty bill");
     }
@@ -72,20 +72,41 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill) {
         }
     }
 
-    // 2. Insert into bills table
+    // 2. Lookup customer details for immutable historical snapshot
+    std::string custName = "";
+    std::string custPhone = "";
+    if (customerId.has_value()) {
+        PreparedStatement custStmt(db, "SELECT full_name, COALESCE(phone, '') FROM customers WHERE id = ?;");
+        custStmt.bind(1, *customerId);
+        if (custStmt.step()) {
+            custName = custStmt.getString(0);
+            custPhone = custStmt.getString(1);
+        }
+    }
+
+    // 3. Insert into bills table
     PreparedStatement billStmt(db, R"(
-        INSERT INTO bills (bill_number, subtotal_paise, total_discount_paise, final_amount_paise)
-        VALUES (?, ?, ?, ?);
+        INSERT INTO bills (bill_number, subtotal_paise, total_discount_paise, final_amount_paise, customer_id, customer_name, customer_phone)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     )");
     billStmt.bind(1, billNumber);
     billStmt.bind(2, bill.getSubtotalInPaise());
     billStmt.bind(3, bill.getTotalDiscountInPaise());
     billStmt.bind(4, bill.getFinalAmountInPaise());
+    if (customerId.has_value()) {
+        billStmt.bind(5, *customerId);
+        billStmt.bind(6, custName);
+        billStmt.bind(7, custPhone);
+    } else {
+        billStmt.bindNull(5);
+        billStmt.bindNull(6);
+        billStmt.bindNull(7);
+    }
     billStmt.execute();
 
     int billId = static_cast<int>(db.getLastInsertRowId());
 
-    // 3. Insert bill items and deduct stock
+    // 4. Insert bill items and deduct stock
     for (const auto& item : bill.getItems()) {
         std::string brandName = "Standard";
         int currentStock = 0;
@@ -167,7 +188,8 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill) {
 
 std::optional<BillRecord> BillRepository::findById(int id) {
     PreparedStatement stmt(db, R"(
-        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at
+        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at,
+               customer_id, COALESCE(customer_name, ''), COALESCE(customer_phone, '')
         FROM bills
         WHERE id = ?;
     )");
@@ -181,6 +203,9 @@ std::optional<BillRecord> BillRepository::findById(int id) {
         record.totalDiscountPaise = stmt.getInt64(3);
         record.finalAmountPaise = stmt.getInt64(4);
         record.createdAt = stmt.getString(5);
+        record.customerId = stmt.getOptionalInt(6);
+        record.customerName = stmt.getString(7);
+        record.customerPhone = stmt.getString(8);
         record.items = getItemsForBill(record.id);
         return record;
     }
@@ -189,7 +214,8 @@ std::optional<BillRecord> BillRepository::findById(int id) {
 
 std::optional<BillRecord> BillRepository::findByBillNumber(const std::string& billNumber) {
     PreparedStatement stmt(db, R"(
-        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at
+        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at,
+               customer_id, COALESCE(customer_name, ''), COALESCE(customer_phone, '')
         FROM bills
         WHERE bill_number = ?;
     )");
@@ -203,6 +229,9 @@ std::optional<BillRecord> BillRepository::findByBillNumber(const std::string& bi
         record.totalDiscountPaise = stmt.getInt64(3);
         record.finalAmountPaise = stmt.getInt64(4);
         record.createdAt = stmt.getString(5);
+        record.customerId = stmt.getOptionalInt(6);
+        record.customerName = stmt.getString(7);
+        record.customerPhone = stmt.getString(8);
         record.items = getItemsForBill(record.id);
         return record;
     }
@@ -212,7 +241,8 @@ std::optional<BillRecord> BillRepository::findByBillNumber(const std::string& bi
 std::vector<BillRecord> BillRepository::getRecentBills(int limit, int offset) {
     std::vector<BillRecord> list;
     PreparedStatement stmt(db, R"(
-        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at
+        SELECT id, bill_number, subtotal_paise, total_discount_paise, final_amount_paise, created_at,
+               customer_id, COALESCE(customer_name, ''), COALESCE(customer_phone, '')
         FROM bills
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?;
@@ -228,6 +258,9 @@ std::vector<BillRecord> BillRepository::getRecentBills(int limit, int offset) {
         record.totalDiscountPaise = stmt.getInt64(3);
         record.finalAmountPaise = stmt.getInt64(4);
         record.createdAt = stmt.getString(5);
+        record.customerId = stmt.getOptionalInt(6);
+        record.customerName = stmt.getString(7);
+        record.customerPhone = stmt.getString(8);
         record.items = getItemsForBill(record.id);
         list.push_back(record);
     }

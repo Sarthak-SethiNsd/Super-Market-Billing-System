@@ -44,7 +44,7 @@ export const productService = {
   },
 
   async create(data: ProductFormData): Promise<Product> {
-    const payload = {
+    const payload: Record<string, any> = {
       sku: data.sku.trim(),
       name: data.name.trim(),
       brandId: data.brandId,
@@ -56,12 +56,13 @@ export const productService = {
       discountType: data.discountType,
       discountValue: data.discountValue,
     };
+    if (data.brandName) payload.brandName = data.brandName.trim();
     const res = await apiClient.post<ApiResponse<Product>>('/api/products', payload);
     return res.data.data;
   },
 
   async update(id: number, data: ProductFormData): Promise<Product> {
-    const payload = {
+    const payload: Record<string, any> = {
       sku: data.sku.trim(),
       name: data.name.trim(),
       brandId: data.brandId,
@@ -73,6 +74,7 @@ export const productService = {
       discountType: data.discountType,
       discountValue: data.discountValue,
     };
+    if (data.brandName) payload.brandName = data.brandName.trim();
     const res = await apiClient.put<ApiResponse<Product>>(`/api/products/${id}`, payload);
     return res.data.data;
   },

@@ -29,5 +29,8 @@ export interface Invoice {
   totalDiscountInRupees: number;
   finalAmountInRupees: number;
   createdAt: string;
+  customerId?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
   items: BillItemSnapshot[];
 }

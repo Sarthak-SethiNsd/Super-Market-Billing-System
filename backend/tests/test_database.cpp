@@ -7,6 +7,7 @@
 #include "repositories/ProductRepository.hpp"
 #include "repositories/BillRepository.hpp"
 #include "repositories/InventoryRepository.hpp"
+#include "repositories/CustomerRepository.hpp"
 #include "models/Perishable.hpp"
 #include "models/NonPerishable.hpp"
 #include "models/Discount.hpp"
@@ -41,17 +42,17 @@ void testDatabaseInitialization() {
 
         DatabaseMigrator::migrate(conn);
         int v = DatabaseMigrator::getCurrentVersion(conn);
-        TEST_ASSERT(v == 2);
+        TEST_ASSERT(v == 4);
 
         // Verify repeatable migration is non-destructive
         DatabaseMigrator::migrate(conn);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 2);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 4);
     }
 
-    // Reopen database and verify version remains 2
+    // Reopen database and verify version remains 4
     {
         DatabaseConnection conn(TEST_DB_PATH);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 2);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 4);
     }
 
     std::cout << "  -> PASSED\n";
@@ -96,10 +97,20 @@ void testBrandAndCategoryRepositories() {
     TEST_ASSERT(caughtDuplicate);
 
     // 5. Category Operations
+    int initialCatCount = static_cast<int>(catRepo.getAll().size());
     int dairyId = catRepo.insert("Dairy");
     int staplesId = catRepo.insert("Staples");
     TEST_ASSERT(dairyId > 0 && staplesId > dairyId);
-    TEST_ASSERT(catRepo.getAll().size() == 2);
+    TEST_ASSERT(catRepo.getAll().size() == initialCatCount + 2);
+
+    // 6. Category-Brand Association Operations (Stage 10L)
+    TEST_ASSERT(catRepo.addBrand(dairyId, amulId));
+    TEST_ASSERT(catRepo.hasBrand(dairyId, amulId));
+    auto dairyBrands = catRepo.getBrands(dairyId);
+    TEST_ASSERT(dairyBrands.size() == 1);
+    TEST_ASSERT(dairyBrands[0].id == amulId);
+    TEST_ASSERT(catRepo.removeBrand(dairyId, amulId));
+    TEST_ASSERT(!catRepo.hasBrand(dairyId, amulId));
 
     std::cout << "  -> PASSED\n";
 }
@@ -418,6 +429,79 @@ void testFailureRecoveryAndTransactionRollback() {
     std::cout << "  -> PASSED\n";
 }
 
+void testCustomerRepository() {
+    std::cout << "[RUNNING] testCustomerRepository...\n";
+    cleanTestDb();
+    DatabaseConnection conn(TEST_DB_PATH);
+    DatabaseMigrator::migrate(conn);
+
+    CustomerRepository custRepo(conn);
+    BrandRepository brandRepo(conn);
+    CategoryRepository catRepo(conn);
+    ProductRepository prodRepo(conn);
+    BillRepository billRepo(conn);
+
+    // 1. Generate code and insert
+    std::string code1 = custRepo.generateNextCustomerCode();
+    TEST_ASSERT(code1 == "CUST-1001");
+
+    CustomerRecord cr1;
+    cr1.customerCode = code1;
+    cr1.fullName = "Priya Sharma";
+    cr1.phone = "+91 98765 43210";
+    cr1.email = "priya.sharma@example.com";
+    int c1Id = custRepo.insert(cr1);
+    TEST_ASSERT(c1Id > 0);
+
+    // 2. Find by ID, code, phone
+    auto c1 = custRepo.findById(c1Id);
+    TEST_ASSERT(c1.has_value());
+    TEST_ASSERT(c1->fullName == "Priya Sharma");
+    TEST_ASSERT(c1->totalPurchases == 0);
+    TEST_ASSERT(c1->lifetimeSpentPaise == 0);
+
+    auto c1ByCode = custRepo.findByCode(code1);
+    TEST_ASSERT(c1ByCode.has_value() && c1ByCode->id == c1Id);
+
+    auto c1ByPhone = custRepo.findByPhone("+91 98765 43210");
+    TEST_ASSERT(c1ByPhone.has_value() && c1ByPhone->id == c1Id);
+
+    // 3. Update customer
+    CustomerRecord crUpdate = *c1;
+    crUpdate.fullName = "Priya Sharma-Patel";
+    crUpdate.email = "priya.p@example.com";
+    bool okUpdate = custRepo.update(crUpdate);
+    TEST_ASSERT(okUpdate);
+    auto c1Updated = custRepo.findById(c1Id);
+    TEST_ASSERT(c1Updated->fullName == "Priya Sharma-Patel");
+
+    // 4. Link a bill with customerId
+    int brandId = brandRepo.insert("TestBrand");
+    int catId = catRepo.insert("TestCategory");
+    NonPerishable p(0, "SKU-DAL-001", "Organic Dal 1kg", brandId, catId, 15000, 20);
+    int pId = prodRepo.insert(p);
+
+    Bill bill;
+    bill.addItemDirect(BillItem(pId, "Organic Dal 1kg", 15000, 0, 2));
+    int bId = billRepo.saveBill("INV-CUST-TEST-1", bill, c1Id);
+    TEST_ASSERT(bId > 0);
+
+    // 5. Verify customer aggregate spending updated
+    auto c1AfterBill = custRepo.findById(c1Id);
+    TEST_ASSERT(c1AfterBill.has_value());
+    TEST_ASSERT(c1AfterBill->totalPurchases == 1);
+    TEST_ASSERT(c1AfterBill->lifetimeSpentPaise == 30000);
+    TEST_ASSERT(!c1AfterBill->lastPurchaseDate.empty());
+
+    // 6. Verify getCustomerBills
+    auto bills = custRepo.getCustomerBills(c1Id);
+    TEST_ASSERT(bills.size() == 1);
+    TEST_ASSERT(bills[0].billNumber == "INV-CUST-TEST-1");
+    TEST_ASSERT(bills[0].customerName == "Priya Sharma-Patel");
+
+    std::cout << "  -> PASSED\n";
+}
+
 int main() {
     std::cout << "=====================================================\n";
     std::cout << "       RUNNING SQLITE DATABASE PERSISTENCE TESTS     \n";
@@ -429,9 +513,10 @@ int main() {
         testBillingPersistenceAndStockSafety();
         testTransactionRollbackOnStockFailure();
         testFailureRecoveryAndTransactionRollback();
+        testCustomerRepository();
         cleanTestDb();
         std::cout << "=====================================================\n";
-        std::cout << "     ALL DATABASE PERSISTENCE TESTS PASSED (6/6)     \n";
+        std::cout << "     ALL DATABASE PERSISTENCE TESTS PASSED (7/7)     \n";
         std::cout << "=====================================================\n";
         return 0;
     } catch (const std::exception& e) {

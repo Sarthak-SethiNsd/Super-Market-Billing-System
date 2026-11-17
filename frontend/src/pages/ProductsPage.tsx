@@ -392,6 +392,7 @@ export const ProductsPage: React.FC = () => {
         onSaved={() => {
           showSuccess(editingProduct ? 'Product updated successfully.' : 'Product created successfully.');
           fetchProducts();
+          fetchFilters();
         }}
         productToEdit={editingProduct}
         brands={brands}

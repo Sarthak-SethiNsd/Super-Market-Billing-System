@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, AlertCircle, X, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { authService } from '@/services/authService';
@@ -10,6 +11,7 @@ interface AdminUnlockModalProps {
 }
 
 export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const { setAdminToken } = useAuth();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,6 +34,7 @@ export const AdminUnlockModal: React.FC<AdminUnlockModalProps> = ({ isOpen, onCl
       await setAdminToken(res.token);
       setPassword('');
       onClose();
+      navigate('/admin');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Authentication failed. Please check the administrator password.');

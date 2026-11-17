@@ -36,6 +36,9 @@ struct BillRecord {
     int64_t totalDiscountPaise = 0;
     int64_t finalAmountPaise = 0;
     std::string createdAt;
+    std::optional<int> customerId = std::nullopt;
+    std::string customerName;
+    std::string customerPhone;
     std::vector<BillItemRecord> items;
 
     double getSubtotalInRupees() const {
@@ -76,7 +79,7 @@ private:
 public:
     explicit BillRepository(DatabaseConnection& conn) : db(conn) {}
 
-    int saveBill(const std::string& billNumber, const Bill& bill);
+    int saveBill(const std::string& billNumber, const Bill& bill, std::optional<int> customerId = std::nullopt);
     std::optional<BillRecord> findById(int id);
     std::optional<BillRecord> findByBillNumber(const std::string& billNumber);
     std::vector<BillRecord> getRecentBills(int limit = 50, int offset = 0);

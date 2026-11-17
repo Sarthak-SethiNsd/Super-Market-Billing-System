@@ -57,6 +57,7 @@ set(DOMAIN_SOURCES
     src/database/PreparedStatement.cpp
     src/database/Transaction.cpp
     src/database/DatabaseMigrator.cpp
+    src/database/DemoDataSeeder.cpp
     src/auth/CryptoUtils.cpp
     src/auth/AuthService.cpp
     src/repositories/UserRepository.cpp
@@ -65,6 +66,7 @@ set(DOMAIN_SOURCES
     src/repositories/ProductRepository.cpp
     src/repositories/InventoryRepository.cpp
     src/repositories/BillRepository.cpp
+    src/repositories/CustomerRepository.cpp
 )
 
 # Reusable Static Domain and Persistence Library
