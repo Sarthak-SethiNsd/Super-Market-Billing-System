@@ -45,7 +45,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
     setIsSaving(false);
 
     if (success) {
-      setSaveFeedback('Connected successfully to POS server!');
+      setSaveFeedback('Connected successfully to backend server!');
       setTimeout(() => setSaveFeedback(null), 3000);
     } else {
       setSaveFeedback('Could not connect to the specified URL.');
@@ -78,10 +78,10 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
             </div>
             <div>
               <h3 id="modal-connection-title" className="text-base font-bold text-slate-900 leading-tight">
-                Backend Server Connection
+                Backend Connection
               </h3>
               <p className="text-xs text-slate-500">
-                POS Terminal & REST Backend Diagnostics
+                Billing &amp; Checkout / REST Backend Diagnostics
               </p>
             </div>
           </div>
@@ -168,7 +168,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({ isOpen, onClos
                 </Button>
               </div>
               <p className="text-[11px] text-slate-500 mt-1.5">
-                For multi-terminal POS setups or cloud deployments, enter the central server URL (e.g., <code className="font-mono text-slate-700">http://192.168.1.100:8080</code> or your cloud API domain).
+                For multi-terminal setups or cloud deployments, enter the central server URL (e.g., <code className="font-mono text-slate-700">http://192.168.1.100:8080</code> or your cloud API domain).
               </p>
             </div>
 

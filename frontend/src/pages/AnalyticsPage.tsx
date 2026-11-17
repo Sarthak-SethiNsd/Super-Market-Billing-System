@@ -309,7 +309,7 @@ export const AnalyticsPage: React.FC = () => {
         <EmptyState
           icon={BarChart3}
           title="No Sales Transactions Recorded"
-          description="Complete orders in the POS Billing Terminal to generate real revenue and sales analytics."
+          description="Complete orders in Billing & Checkout to generate real revenue and sales analytics."
         />
       ) : (
         <div className="space-y-6">

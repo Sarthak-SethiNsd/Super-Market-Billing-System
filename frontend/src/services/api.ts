@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ApiError } from '@/types/api';
 
 export const resolveApiBaseUrl = (): string => {
-  // 1. Runtime override saved in browser (for POS terminals or remote servers)
+  // 1. Runtime override saved in browser (for billing terminals or remote servers)
   try {
     const saved = localStorage.getItem('sms_api_base_url');
     if (saved && saved.trim()) {

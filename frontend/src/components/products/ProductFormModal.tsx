@@ -180,7 +180,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             {/* SKU */}
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-700">
-                Product SKU / Barcode *
+                Product Code / Barcode *
               </label>
               <input
                 type="text"

@@ -15,11 +15,11 @@ const routeTitles: Record<string, { title: string; category: string }> = {
   '/staff': { title: 'Dashboard Overview', category: 'Analytics & Summary' },
   '/dashboard': { title: 'Dashboard Overview', category: 'Analytics & Summary' },
   '/products': { title: 'Product Catalog', category: 'Inventory' },
-  '/billing': { title: 'POS Billing Terminal', category: 'Sales & Checkout' },
-  '/transactions': { title: 'Transaction History', category: 'Sales & Invoices' },
+  '/billing': { title: 'Billing & Checkout', category: 'Sales & Checkout' },
+  '/transactions': { title: 'Transactions & Sales History', category: 'Sales & Invoices' },
   '/inventory': { title: 'Inventory Management', category: 'Stock Control' },
   '/analytics': { title: 'Sales Analytics', category: 'Reports' },
-  '/admin': { title: 'Administrative Settings', category: 'Security & Access' },
+  '/admin': { title: 'Admin Panel & Staff Management', category: 'Administration' },
   '/oop-concepts': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
   '/system-architecture': { title: 'C++ OOP Concepts Explorer', category: 'Architecture' },
 };
@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
   const navigate = useNavigate();
   const { role, isAdmin, clearAdminSession } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const currentRoute = routeTitles[location.pathname] || { title: 'Supermarket POS', category: 'System' };
+  const currentRoute = routeTitles[location.pathname] || { title: 'Supermart Management', category: 'System' };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,16 +80,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
             <span>System Home</span>
           </Link>
 
-          {/* Quick Jump to POS Scanner */}
+          {/* Quick Jump to Billing Scanner */}
           <button
             type="button"
             onClick={() => navigate('/billing')}
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded bg-[#FAF9F5] border border-[#E5E4DC] text-[#777D76] text-xs w-52 hover:border-[#D4D3C9] hover:bg-[#F7F6F1] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#285943] text-left"
-            title="Open POS Barcode & SKU Scanner (Ctrl+K)"
-            aria-label="Open POS barcode and SKU search"
+            title="Open Barcode & Product Scanner (Ctrl+K)"
+            aria-label="Open barcode and product search"
           >
             <Search className="w-3.5 h-3.5 text-[#777D76]" />
-            <span className="flex-1 text-[#777D76] truncate">Search SKU, barcode...</span>
+            <span className="flex-1 text-[#777D76] truncate">Search code, barcode...</span>
             <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-[#E5E4DC] rounded text-[#777D76]">Ctrl K</kbd>
           </button>
 
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <Badge variant="staff" className="gap-1 py-1 px-2.5 text-xs">
                   <Shield className="w-3.5 h-3.5 text-[#285943]" />
-                  <span className="hidden sm:inline">Staff Mode (POS)</span>
+                  <span className="hidden sm:inline">Staff Mode</span>
                   <span className="sm:hidden">{role}</span>
                 </Badge>
                 <Button

@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  UserCheck
+  UserCheck,
+  Lock
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -33,14 +34,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { role, isAdmin } = useAuth();
   const location = useLocation();
 
-  const navItems = [
+  const operationItems = [
     { name: 'Dashboard', path: '/staff', aliasPath: '/dashboard', icon: LayoutDashboard },
-    { name: 'Product Catalog', path: '/products', icon: Package },
-    { name: 'Billing / POS', path: '/billing', icon: ShoppingCart },
-    { name: 'Transaction History', path: '/transactions', icon: Receipt },
+    { name: 'Billing & Checkout', path: '/billing', icon: ShoppingCart },
+  ];
+
+  const adminModules = [
+    { name: 'Admin Panel Hub', path: '/admin', icon: ShieldAlert },
+    { name: 'Product Management', path: '/products', icon: Package },
     { name: 'Inventory Management', path: '/inventory', icon: Boxes },
     { name: 'Sales Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Admin Management', path: '/admin', icon: ShieldAlert, adminOnly: true },
+    { name: 'Staff Management', path: '/admin', icon: UserCheck },
+    { name: 'Transactions & Sales History', path: '/transactions', icon: Receipt },
+  ];
+
+  const technicalItems = [
     { name: 'OOP Concepts Explorer', path: '/oop-concepts', icon: Code2, badge: 'C++17' },
   ];
 
@@ -54,56 +62,121 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
             <span className="font-bold text-base text-white tracking-tight leading-tight truncate">
-              Supermart POS
+              Supermart
             </span>
             <span className="text-xs text-[#9cb5a8] font-medium tracking-wide">
-              C++ Supermarket Core
+              Management Platform
             </span>
           </div>
         )}
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <div className={`px-3 mb-2 text-[10px] font-semibold text-[#82998e] uppercase tracking-wider ${collapsed ? 'hidden' : 'block'}`}>
-          Operations
+      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        {/* Operations Section */}
+        <div className="space-y-1">
+          <div className={`px-3 mb-2 text-[10px] font-semibold text-[#82998e] uppercase tracking-wider ${collapsed ? 'hidden' : 'block'}`}>
+            Operations
+          </div>
+          {operationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onCloseMobile}
+                className={({ isActive }) => {
+                  const active = isActive || (item.aliasPath && location.pathname === item.aliasPath);
+                  return `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-all group relative ${
+                    active
+                      ? 'bg-[#285943] text-white shadow-xs'
+                      : 'text-[#b4c7be] hover:text-white hover:bg-[#1f3029]'
+                  } ${collapsed ? 'justify-center px-2' : ''}`;
+                }}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
+                {!collapsed && (
+                  <span className="truncate flex-1">{item.name}</span>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onCloseMobile}
-              className={({ isActive }) => {
-                const active = isActive || (item.aliasPath && location.pathname === item.aliasPath);
-                return `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-all group relative ${
-                  active
-                    ? 'bg-[#285943] text-white shadow-xs'
-                    : 'text-[#b4c7be] hover:text-white hover:bg-[#1f3029]'
-                } ${collapsed ? 'justify-center px-2' : ''}`;
-              }}
-              title={collapsed ? item.name : undefined}
-            >
-              <Icon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
-              {!collapsed && (
-                <span className="truncate flex-1">{item.name}</span>
-              )}
-              {!collapsed && item.badge && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-[#1d2d26] text-[#b4c7be] border border-[#334c41]">
-                  {item.badge}
-                </span>
-              )}
-              {!collapsed && item.adminOnly && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                  isAdmin ? 'bg-[#3b3223] text-[#e8cda2] border border-[#524430]' : 'bg-[#1d2d26] text-[#82998e]'
-                }`}>
-                  Admin
-                </span>
-              )}
-            </NavLink>
-          );
-        })}
+
+        {/* Admin Panel Section */}
+        <div className="space-y-1 pt-2 border-t border-[#334c41]/50">
+          <div className={`flex items-center justify-between px-3 mb-2 text-[10px] font-semibold text-[#82998e] uppercase tracking-wider ${collapsed ? 'hidden' : 'flex'}`}>
+            <span>Admin Panel</span>
+            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${isAdmin ? 'bg-[#285943] text-white' : 'bg-[#1d2d26] text-[#82998e]'}`}>
+              {isAdmin ? 'UNLOCKED' : 'AUTH REQ'}
+            </span>
+          </div>
+          {adminModules.map((item, idx) => {
+            const Icon = item.icon;
+            // Prevent duplicate NavLink rendering when on /admin for both hub & staff
+            const isStaffItem = item.name === 'Staff Management';
+            return (
+              <NavLink
+                key={`${item.path}-${idx}`}
+                to={item.path}
+                onClick={onCloseMobile}
+                className={({ isActive }) => {
+                  const active = isStaffItem ? false : isActive;
+                  return `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-all group relative ${
+                    active
+                      ? 'bg-[#285943] text-white shadow-xs'
+                      : 'text-[#b4c7be] hover:text-white hover:bg-[#1f3029]'
+                  } ${collapsed ? 'justify-center px-2' : ''}`;
+                }}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
+                {!collapsed && (
+                  <span className="truncate flex-1 text-xs">{item.name}</span>
+                )}
+                {!collapsed && !isAdmin && (
+                  <Lock className="w-3 h-3 text-[#777D76] shrink-0" />
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
+
+        {/* Technical & Academic Section */}
+        <div className="space-y-1 pt-2 border-t border-[#334c41]/50">
+          <div className={`px-3 mb-2 text-[10px] font-semibold text-[#82998e] uppercase tracking-wider ${collapsed ? 'hidden' : 'block'}`}>
+            Academic Architecture
+          </div>
+          {technicalItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onCloseMobile}
+                className={({ isActive }) => {
+                  return `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-all group relative ${
+                    isActive
+                      ? 'bg-[#285943] text-white shadow-xs'
+                      : 'text-[#b4c7be] hover:text-white hover:bg-[#1f3029]'
+                  } ${collapsed ? 'justify-center px-2' : ''}`;
+                }}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
+                {!collapsed && (
+                  <span className="truncate flex-1 text-xs">{item.name}</span>
+                )}
+                {!collapsed && item.badge && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium bg-[#1d2d26] text-[#b4c7be] border border-[#334c41]">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Return to System Home Link */}

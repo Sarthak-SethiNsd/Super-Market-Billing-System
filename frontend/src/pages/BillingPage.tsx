@@ -87,7 +87,7 @@ export const BillingPage: React.FC = () => {
         setCheckoutError(`Cannot add "${match.name}": Product is out of stock.`);
       }
     } else {
-      setCheckoutError(`No product found matching barcode/SKU: "${barcodeInput}".`);
+      setCheckoutError(`No product found matching barcode or product code: "${barcodeInput}".`);
     }
   };
 
@@ -202,7 +202,7 @@ export const BillingPage: React.FC = () => {
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold text-[#303631] tracking-tight flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-[#285943] shrink-0" />
-            <span>Point of Sale (POS) Billing Terminal</span>
+            <span>Billing &amp; Checkout Terminal</span>
           </h2>
           <p className="text-xs text-[#777D76] mt-0.5">
             Rapid barcode discovery and transactional checkout via C++ ACID persistence.
@@ -212,8 +212,8 @@ export const BillingPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto shrink-0">
           <Badge variant="success" className="gap-1.5 py-1 px-2.5 sm:px-3 text-xs">
             <Zap className="w-3.5 h-3.5 text-[#2E6F40] shrink-0" />
-            <span className="hidden sm:inline">POS Terminal Active (Staff Mode)</span>
-            <span className="sm:hidden">POS Active (Staff)</span>
+            <span className="hidden sm:inline">Billing &amp; Checkout Active (Staff Mode)</span>
+            <span className="sm:hidden">Checkout Active</span>
           </Badge>
           <Button
             variant="outline"
@@ -242,7 +242,7 @@ export const BillingPage: React.FC = () => {
                   type="text"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="Scan barcode or type exact SKU, then press Enter..."
+                  placeholder="Scan barcode or type exact product code, then press Enter..."
                   className="w-full pl-10 pr-20 sm:pr-24 py-2.5 text-xs sm:text-sm rounded border border-[#E5E4DC] bg-[#FAF9F5] focus:bg-white focus:outline-none focus:border-[#285943] text-[#303631] placeholder:text-[#777D76] font-mono transition-all"
                   autoFocus
                 />
@@ -381,7 +381,7 @@ export const BillingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: POS Cart & Checkout Ledger (5 cols) */}
+        {/* Right Column: Active Cart & Checkout Ledger (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <Card className="border-[#E5E4DC] shadow-xs flex flex-col h-full bg-white">
             <CardHeader className="py-3 px-4 bg-[#263B32] text-white rounded-t flex flex-row items-center justify-between border-b border-[#334c41]">

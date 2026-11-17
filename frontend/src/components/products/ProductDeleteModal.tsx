@@ -56,7 +56,7 @@ export const ProductDeleteModal: React.FC<ProductDeleteModalProps> = ({
         </p>
 
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 text-[11px] text-slate-500">
-          This performs a soft deletion (<code className="font-mono text-slate-700">is_active = 0</code>). The product will be hidden from new POS sales, but historical invoices will continue to reference it safely.
+          This performs a soft deletion (<code className="font-mono text-slate-700">is_active = 0</code>). The product will be hidden from new checkout sales, but historical invoices will continue to reference it safely.
         </div>
 
         {error && (

@@ -126,7 +126,7 @@ export const InventoryPage: React.FC = () => {
         return (
           <Badge variant="default" className="gap-1 text-[10px] bg-[#EEF5F0] text-[#285943] border-[#C2D9C8]">
             <ShoppingCart className="w-3 h-3" />
-            SALE (POS)
+            SALE (CHECKOUT)
           </Badge>
         );
       case 'ADJUSTMENT':
@@ -254,7 +254,7 @@ export const InventoryPage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search movements by product name, SKU, or audit reason..."
+                placeholder="Search movements by product name, code, or reason..."
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-800"
               />
             </div>
@@ -297,10 +297,10 @@ export const InventoryPage: React.FC = () => {
           <div>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <History className="w-4 h-4 text-purple-600" />
-              Stock Movement Audit Log
+              Stock Movement History
             </CardTitle>
             <CardDescription className="text-xs">
-              Immutable ledger from <code className="font-mono text-slate-700">inventory_movements</code> table
+              Immutable history from <code className="font-mono text-slate-700">inventory_movements</code> table
             </CardDescription>
           </div>
           <span className="text-xs font-mono text-slate-400">
