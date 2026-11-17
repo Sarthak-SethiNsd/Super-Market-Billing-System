@@ -97,9 +97,9 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
               <div className="text-center space-y-1 border-b border-dashed border-slate-300 pb-4">
                 <div className="inline-flex items-center justify-center gap-2 text-slate-900 font-extrabold text-lg">
                   <Store className="w-5 h-5 text-emerald-600" />
-                  ApexMart Supermarket
+                  Supermart
                 </div>
-                <p className="text-xs text-slate-500">Retail Sales & Inventory Management</p>
+                <p className="text-xs text-slate-500">Supermarket Billing &amp; Inventory Management</p>
                 <div className="pt-3 flex items-center justify-between text-xs text-slate-600 font-mono">
                   <span>Invoice: <strong className="text-slate-900">{invoice.billNumber}</strong></span>
                   <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>

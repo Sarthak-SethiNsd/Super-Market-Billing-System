@@ -151,7 +151,7 @@ export const InventoryPage: React.FC = () => {
             Inventory Stock & Movement Auditing
           </h2>
           <p className="text-xs text-[#777D76]">
-            Real-time physical stock metrics and complete historical movement audit ledger.
+            Real-time stock metrics and complete historical movement audit ledger.
           </p>
         </div>
 
@@ -218,7 +218,7 @@ export const InventoryPage: React.FC = () => {
           <div className="text-2xl font-extrabold text-emerald-700 font-mono">
             {totalStockUnits}
           </div>
-          <span className="text-[11px] text-slate-400">Physical units in store</span>
+          <span className="text-[11px] text-slate-400">Total units in inventory</span>
         </Card>
 
         <Card className="p-4 border-slate-200">

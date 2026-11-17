@@ -51,9 +51,9 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
           <div className="text-center space-y-1 border-b border-dashed border-[#E5E4DC] pb-4">
             <div className="inline-flex items-center justify-center gap-2 text-[#303631] font-bold text-lg">
               <Store className="w-5 h-5 text-[#285943]" />
-              ApexMart Supermarket
+              Supermart
             </div>
-            <p className="text-xs text-[#777D76]">Retail Billing & Inventory Management</p>
+            <p className="text-xs text-[#777D76]">Supermarket Billing &amp; Inventory Management</p>
             <div className="pt-2 flex items-center justify-between text-xs text-[#777D76] font-mono">
               <span>Invoice: <strong className="text-[#303631]">{invoice.billNumber}</strong></span>
               <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>

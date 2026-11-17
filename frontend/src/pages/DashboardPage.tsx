@@ -40,7 +40,7 @@ export const DashboardPage: React.FC = () => {
             Supermarket Operations & Billing Command Center
           </h2>
           <p className="text-[#b4c7be] text-sm md:text-base leading-relaxed">
-            Welcome to the retail workstation. The application operates in <strong className="text-white">{role} Mode</strong>. All financial transactions calculate prices and discounts in exact integer paise via the C++ domain engine.
+            Welcome to the management workstation. The application operates in <strong className="text-white">{role} Mode</strong>. All financial transactions calculate prices and discounts in exact integer paise via the C++ domain engine.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">

@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
             <span className="font-bold text-base text-white tracking-tight leading-tight truncate">
-              ApexMart POS
+              Supermart POS
             </span>
             <span className="text-xs text-[#9cb5a8] font-medium tracking-wide">
               C++ Supermarket Core
@@ -106,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
-      {/* Return to Public Customer Website Link */}
+      {/* Return to System Home Link */}
       <div className="px-3 pt-2 pb-1 border-t border-[#334c41]">
         <NavLink
           to="/"
@@ -114,10 +114,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`flex items-center gap-3 px-3 py-2 rounded text-xs font-semibold text-[#b4c7be] hover:text-white hover:bg-[#1f3029] transition-colors ${
             collapsed ? 'justify-center px-2 py-2.5' : ''
           }`}
-          title="Return to Public Customer Website"
+          title="Return to System Home"
         >
           <Store className="w-4 h-4 text-[#71836A] shrink-0" />
-          {!collapsed && <span className="truncate">Customer Website</span>}
+          {!collapsed && <span className="truncate">System Home</span>}
         </NavLink>
       </div>
 
@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-white truncate">
-                {isAdmin ? 'Store Administrator' : 'Terminal Operator'}
+                {isAdmin ? 'System Administrator' : 'Terminal Operator'}
               </div>
               <div className="text-[11px] text-[#9cb5a8] flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-[#e8cda2]' : 'bg-[#71836A]'}`} />

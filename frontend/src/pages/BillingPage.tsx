@@ -381,7 +381,7 @@ export const BillingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Shopping Cart & Checkout Ledger (5 cols) */}
+        {/* Right Column: POS Cart & Checkout Ledger (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <Card className="border-[#E5E4DC] shadow-xs flex flex-col h-full bg-white">
             <CardHeader className="py-3 px-4 bg-[#263B32] text-white rounded-t flex flex-row items-center justify-between border-b border-[#334c41]">

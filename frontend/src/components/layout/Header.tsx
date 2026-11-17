@@ -68,16 +68,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar }) => {
           </div>
         </div>
 
-        {/* Right: Customer Website Link + Quick Search + Status Indicator + Auth Role Pill */}
+        {/* Right: System Home Link + Quick Search + Status Indicator + Auth Role Pill */}
         <div className="flex flex-wrap items-center justify-between sm:justify-end w-full lg:w-auto gap-1.5 sm:gap-2 md:gap-3">
-          {/* Link to Customer Website */}
+          {/* Link to System Home */}
           <Link
             to="/"
             className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#E5E4DC] bg-white text-xs font-medium text-[#303631] hover:text-[#285943] hover:border-[#285943] hover:bg-[#F7F6F1] transition-colors"
-            title="Open customer-facing supermarket website"
+            title="Open Supermart System Home"
           >
             <Store className="w-3.5 h-3.5 text-[#285943]" />
-            <span>Customer Website</span>
+            <span>System Home</span>
           </Link>
 
           {/* Quick Jump to POS Scanner */}

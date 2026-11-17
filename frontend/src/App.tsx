@@ -4,10 +4,10 @@ import { AuthProvider } from '@/context/AuthContext';
 import { HealthProvider } from '@/context/HealthContext';
 import { Layout } from '@/components/layout/Layout';
 
-// Customer-Facing Public Website
+// Application Homepage
 import { HomePage } from '@/pages/HomePage';
 
-// Internal Staff & Store Management Pages
+// Internal Operations & System Management Pages
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { BillingPage } from '@/pages/BillingPage';

@@ -203,7 +203,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             {/* Quantity Input */}
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-slate-700">
-                {operationType === 'CORRECTION' ? 'Counted Actual Physical Stock (Units) *' : 'Quantity to Add / Remove (Units) *'}
+                {operationType === 'CORRECTION' ? 'Counted Actual Stock On Hand (Units) *' : 'Quantity to Add / Remove (Units) *'}
               </label>
               <input
                 type="number"
@@ -271,7 +271,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               <div>
                 <h4 className="font-bold text-xs uppercase tracking-wide">Confirm Stock Modification</h4>
                 <p className="text-xs text-amber-700">
-                  This action updates the physical product inventory in SQLite and generates an immutable audit record.
+                  This action updates the product inventory in SQLite and generates an immutable audit record.
                 </p>
               </div>
             </div>

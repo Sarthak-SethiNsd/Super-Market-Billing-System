@@ -133,7 +133,7 @@ export const CategoryManager: React.FC = () => {
             </div>
             <div>
               <CardTitle className="text-base">Category Management</CardTitle>
-              <CardDescription className="text-xs">Product departments and aisles</CardDescription>
+              <CardDescription className="text-xs">Product categories and taxonomy</CardDescription>
             </div>
           </div>
           {isAdmin ? (

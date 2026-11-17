@@ -16,7 +16,7 @@ export const NotFoundPage: React.FC = () => {
         <Link to="/">
           <Button variant="primary" size="md" className="gap-2">
             <Store className="w-4 h-4" />
-            <span>ApexMart Storefront</span>
+            <span>Supermart Home</span>
           </Button>
         </Link>
         <Link to="/staff">

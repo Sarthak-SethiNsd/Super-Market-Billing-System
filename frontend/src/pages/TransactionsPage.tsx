@@ -99,7 +99,7 @@ export const TransactionsPage: React.FC = () => {
             Transaction History & Invoices
           </h2>
           <p className="text-xs text-[#777D76]">
-            Immutable customer sales ledger with frozen historical snapshots in SQLite.
+            Immutable sales ledger with frozen historical snapshots in SQLite.
           </p>
         </div>
 
@@ -216,7 +216,7 @@ export const TransactionsPage: React.FC = () => {
           <div>
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <Receipt className="w-4 h-4 text-indigo-600" />
-              Filed Customer Invoices
+              Filed Sales Invoices
             </CardTitle>
             <CardDescription className="text-xs">
               Every invoice preserves the exact line item pricing at time of purchase
@@ -239,7 +239,7 @@ export const TransactionsPage: React.FC = () => {
               description={
                 searchQuery
                   ? `No invoices match "${searchQuery}".`
-                  : 'No customer checkout transactions have been recorded yet.'
+                  : 'No checkout transactions have been recorded yet.'
               }
               className="border-0 p-12"
             />

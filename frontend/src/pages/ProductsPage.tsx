@@ -122,7 +122,7 @@ export const ProductsPage: React.FC = () => {
             Product Catalog
           </h2>
           <p className="text-sm text-slate-500">
-            Real-time grocery inventory catalog powered by C++ domain models and strategy discounts.
+            Real-time product inventory catalog powered by C++ domain models and strategy discounts.
           </p>
         </div>
 
@@ -243,7 +243,7 @@ export const ProductsPage: React.FC = () => {
               description={
                 searchQuery || selectedBrandId !== 'all' || selectedCategoryId !== 'all'
                   ? 'No products matched your active filters. Try adjusting your search query.'
-                  : 'Your supermarket catalog is currently empty. Add your first grocery item to begin.'
+                  : 'Your supermarket catalog is currently empty. Add your first product to begin.'
               }
               actionLabel={isAdmin ? 'Add Product' : undefined}
               onAction={isAdmin ? handleOpenCreate : undefined}
