@@ -50,10 +50,13 @@ export const resetApiBaseUrl = (): string => {
   return API_BASE_URL;
 };
 
-// Request interceptor: attach bearer token if present
+// Request interceptor: attach bearer token if present in session storage (isolated per tab)
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('sms_staff_token') || localStorage.getItem('sms_admin_token');
+    let token: string | null = null;
+    try {
+      token = sessionStorage.getItem('sms_staff_token') || sessionStorage.getItem('sms_admin_token');
+    } catch {}
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
