@@ -42,17 +42,17 @@ void testDatabaseInitialization() {
 
         DatabaseMigrator::migrate(conn);
         int v = DatabaseMigrator::getCurrentVersion(conn);
-        TEST_ASSERT(v == 4);
+        TEST_ASSERT(v == 5);
 
         // Verify repeatable migration is non-destructive
         DatabaseMigrator::migrate(conn);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 4);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 5);
     }
 
-    // Reopen database and verify version remains 4
+    // Reopen database and verify version remains 5
     {
         DatabaseConnection conn(TEST_DB_PATH);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 4);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 5);
     }
 
     std::cout << "  -> PASSED\n";

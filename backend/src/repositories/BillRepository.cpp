@@ -1,4 +1,5 @@
 #include "repositories/BillRepository.hpp"
+#include "repositories/ProductBatchRepository.hpp"
 #include "database/DatabaseConnection.hpp"
 #include "database/PreparedStatement.hpp"
 #include "database/Transaction.hpp"
@@ -176,6 +177,10 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
             if (db.getChanges() == 0) {
                 throw std::runtime_error("Concurrent stock conflict for product ID: " + std::to_string(item.getProductId()));
             }
+
+            // Deduct from batches using FEFO and update product's nearest expiry date
+            ProductBatchRepository batchRepo(db);
+            batchRepo.deductStockFEFO(item.getProductId(), item.getQuantity());
 
             PreparedStatement moveStmt(db, R"(
                 INSERT INTO inventory_movements (product_id, movement_type, quantity_change,

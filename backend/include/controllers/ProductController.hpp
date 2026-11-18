@@ -4,6 +4,8 @@
 #include "repositories/BrandRepository.hpp"
 #include "repositories/CategoryRepository.hpp"
 #include "repositories/InventoryRepository.hpp"
+#include "repositories/ProductBatchRepository.hpp"
+#include "database/PreparedStatement.hpp"
 #include "database/Transaction.hpp"
 #include "models/Perishable.hpp"
 #include "models/NonPerishable.hpp"
@@ -125,6 +127,49 @@ public:
         return expiryDate;
     }
 
+    static std::string normalizeName(const std::string& input) {
+        std::string res;
+        bool inSpace = false;
+        for (char c : input) {
+            if (std::isspace(static_cast<unsigned char>(c))) {
+                if (!inSpace && !res.empty()) {
+                    res.push_back(' ');
+                    inSpace = true;
+                }
+            } else {
+                res.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+                inSpace = false;
+            }
+        }
+        while (!res.empty() && res.back() == ' ') {
+            res.pop_back();
+        }
+        return res;
+    }
+
+    static std::string normalizeProductType(const std::string& raw) {
+        std::string upper = ControllerUtils::trimCopy(raw);
+        for (char& c : upper) {
+            c = (c == '-') ? '_' : static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        }
+        if (upper == "PERISHABLE" || upper == "NON_PERISHABLE") {
+            return upper;
+        }
+        throw std::invalid_argument("Invalid productType. Expected PERISHABLE or NON_PERISHABLE");
+    }
+
+    static bool isValidBarcodeOrCode(const std::string& code) {
+        if (code.size() < 3 || code.size() > 64) return false;
+        for (char c : code) {
+            if (!std::isdigit(static_cast<unsigned char>(c))) return false;
+        }
+        return true;
+    }
+
+    static bool isValidThreeDigitCode(const std::string& code) {
+        return isValidBarcodeOrCode(code);
+    }
+
     static nlohmann::json productToJson(const Product& p, DatabaseConnection& db) {
         BrandRepository brandRepo(db);
         CategoryRepository catRepo(db);
@@ -159,9 +204,64 @@ public:
             }
         }
 
+        // Fetch batches for this product (Multiple Expiry Dates)
+        ProductBatchRepository batchRepo(db);
+        auto batches = batchRepo.getBatchesByProductId(p.getId());
+
+        nlohmann::json batchArr = nlohmann::json::array();
+        bool hasExpired = false;
+        int expiredUnits = 0;
+        int activeUnits = 0;
+        std::string nearestExp = "";
+
+        for (const auto& b : batches) {
+            bool exp = b.isExpired();
+            if (exp) {
+                hasExpired = true;
+                expiredUnits += b.getQuantity();
+            } else {
+                activeUnits += b.getQuantity();
+                if (b.getQuantity() > 0 && (nearestExp.empty() || b.getExpiryDate() < nearestExp)) {
+                    nearestExp = b.getExpiryDate();
+                }
+            }
+            batchArr.push_back({
+                {"id", b.getId()},
+                {"batchNumber", b.getBatchNumber()},
+                {"quantity", b.getQuantity()},
+                {"expiryDate", b.getExpiryDate()},
+                {"isExpired", exp},
+                {"daysUntilExpiry", b.getDaysUntilExpiry()},
+                {"status", b.getStatus()},
+                {"createdAt", b.getCreatedAt()}
+            });
+        }
+
+        std::string effectiveExpiry = !nearestExp.empty() ? nearestExp : expiry;
+
+        // Fetch price & discount history (Daily Editing Audit Trail)
+        nlohmann::json priceHistArr = nlohmann::json::array();
+        try {
+            PreparedStatement phQuery(db, "SELECT old_price_paise, new_price_paise, old_discount_type, new_discount_type, old_discount_value, new_discount_value, notes, changed_at FROM price_history WHERE product_id = ? ORDER BY id DESC;");
+            phQuery.bind(1, p.getId());
+            while (phQuery.step()) {
+                priceHistArr.push_back({
+                    {"oldPriceInRupees", phQuery.getInt64(0) / 100.0},
+                    {"newPriceInRupees", phQuery.getInt64(1) / 100.0},
+                    {"oldDiscountType", phQuery.getString(2)},
+                    {"newDiscountType", phQuery.getString(3)},
+                    {"oldDiscountValue", phQuery.getDouble(4)},
+                    {"newDiscountValue", phQuery.getDouble(5)},
+                    {"notes", phQuery.getString(6)},
+                    {"changedAt", phQuery.getString(7)}
+                });
+            }
+        } catch (...) {}
+
         return nlohmann::json{
             {"id", p.getId()},
             {"sku", p.getSku()},
+            {"barcode", p.getSku()},
             {"name", p.getName()},
             {"brandId", p.getBrandId()},
             {"brandName", brandName},
@@ -171,7 +271,14 @@ public:
             {"priceInPaise", p.getPriceInPaise()},
             {"priceInRupees", p.getPrice()},
             {"stock", p.getStock()},
-            {"expiryDate", expiry},
+            {"expiryDate", effectiveExpiry},
+            {"nearestExpiryDate", effectiveExpiry},
+            {"batches", batchArr},
+            {"batchCount", batchArr.size()},
+            {"hasExpiredBatches", hasExpired},
+            {"expiredUnits", expiredUnits},
+            {"activeUnits", (batches.empty() ? p.getStock() : activeUnits)},
+            {"priceHistory", priceHistArr},
             {"discount", {
                 {"type", discType},
                 {"value", discValue},
@@ -180,24 +287,6 @@ public:
                 {"discountedPriceInRupees", p.getDiscountedPriceInRupees()}
             }}
         };
-    }
-
-    static std::string normalizeProductType(const std::string& raw) {
-        std::string upper = ControllerUtils::trimCopy(raw);
-        for (char& c : upper) {
-            c = (c == '-') ? '_' : static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-        }
-        if (upper == "PERISHABLE" || upper == "NON_PERISHABLE") {
-            return upper;
-        }
-        throw std::invalid_argument("Invalid productType. Expected PERISHABLE or NON_PERISHABLE");
-    }
-
-    static bool isValidThreeDigitCode(const std::string& code) {
-        if (code.size() != 3) return false;
-        return std::isdigit(static_cast<unsigned char>(code[0])) &&
-               std::isdigit(static_cast<unsigned char>(code[1])) &&
-               std::isdigit(static_cast<unsigned char>(code[2]));
     }
 
     static void registerRoutes(ControllerUtils::CrowApp& app, DatabaseConnection& db, AuthService& auth, const std::string& allowedOrigin) {
@@ -277,54 +366,91 @@ public:
                         if (!body.contains("name") || !body["name"].is_string()) {
                             return ControllerUtils::errorResponse(400, "Product name is required", allowedOrigin);
                         }
-                        if (!body.contains("sku") || !body["sku"].is_string()) {
-                            return ControllerUtils::errorResponse(400, "Product SKU is required", allowedOrigin);
+
+                        std::string sku = "";
+                        if (body.contains("sku") && body["sku"].is_string()) {
+                            sku = ControllerUtils::trimCopy(body["sku"].get<std::string>());
+                        } else if (body.contains("barcode") && body["barcode"].is_string()) {
+                            sku = ControllerUtils::trimCopy(body["barcode"].get<std::string>());
+                        } else if (body.contains("code") && body["code"].is_string()) {
+                            sku = ControllerUtils::trimCopy(body["code"].get<std::string>());
                         }
 
                         std::string name = ControllerUtils::trimCopy(body["name"].get<std::string>());
-                        std::string sku = ControllerUtils::trimCopy(body["sku"].get<std::string>());
                         if (name.empty() || name.size() > 200) {
                             return ControllerUtils::errorResponse(400, "Product name must be between 1 and 200 characters", allowedOrigin);
                         }
                         if (sku.empty() || sku.size() > 64) {
-                            return ControllerUtils::errorResponse(400, "Product SKU must be between 1 and 64 characters", allowedOrigin);
+                            return ControllerUtils::errorResponse(400, "Product barcode/SKU is required and must be between 1 and 64 characters", allowedOrigin);
                         }
-                        if (!isValidThreeDigitCode(sku)) {
-                            return ControllerUtils::errorResponse(400, "Product code must contain exactly three numeric digits (e.g. 001, 025, 999)", allowedOrigin);
+                        if (!isValidBarcodeOrCode(sku)) {
+                            return ControllerUtils::errorResponse(400, "Product code/barcode must contain only numeric digits (minimum 3 digits, e.g. 001, 123456)", allowedOrigin);
                         }
 
                         std::string fieldErr;
+                        CategoryRepository catRepo(db);
+                        int categoryId = 0;
+                        if (body.contains("categoryId") && ControllerUtils::parseStrictIntField(body, "categoryId", 1, 1000000000, categoryId, fieldErr)) {
+                            // categoryId parsed
+                        } else if (body.contains("category") && body["category"].is_string()) {
+                            std::string catName = ControllerUtils::trimCopy(body["category"].get<std::string>());
+                            auto catOpt = catRepo.findByName(catName);
+                            if (catOpt.has_value()) {
+                                categoryId = catOpt->id;
+                            } else {
+                                categoryId = catRepo.insert(catName);
+                            }
+                        } else if (body.contains("categoryName") && body["categoryName"].is_string()) {
+                            std::string catName = ControllerUtils::trimCopy(body["categoryName"].get<std::string>());
+                            auto catOpt = catRepo.findByName(catName);
+                            if (catOpt.has_value()) {
+                                categoryId = catOpt->id;
+                            } else {
+                                categoryId = catRepo.insert(catName);
+                            }
+                        }
+                        if (categoryId <= 0 || !catRepo.findById(categoryId).has_value()) {
+                            return ControllerUtils::errorResponse(400, "A valid category must be selected", allowedOrigin);
+                        }
+
                         BrandRepository brandRepo(db);
                         int brandId = 0;
-
                         if (body.contains("brandName") && body["brandName"].is_string()) {
                             std::string bName = ControllerUtils::trimCopy(body["brandName"].get<std::string>());
-                            if (bName.empty()) {
-                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
-                            }
+                            if (bName.empty()) return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
                             brandId = brandRepo.getOrCreate(bName);
                         } else if (body.contains("brand") && body["brand"].is_string()) {
                             std::string bName = ControllerUtils::trimCopy(body["brand"].get<std::string>());
-                            if (bName.empty()) {
-                                return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
-                            }
+                            if (bName.empty()) return ControllerUtils::errorResponse(400, "Brand name cannot be empty", allowedOrigin);
                             brandId = brandRepo.getOrCreate(bName);
                         } else if (body.contains("brandId") && ControllerUtils::parseStrictIntField(body, "brandId", 1, 1000000000, brandId, fieldErr)) {
                             if (!brandRepo.findById(brandId).has_value()) {
                                 return ControllerUtils::errorResponse(400, "Referenced brandId does not exist", allowedOrigin);
                             }
                         } else {
-                            return ControllerUtils::errorResponse(400, "Brand is required", allowedOrigin);
+                            auto catBrands = catRepo.getBrands(categoryId);
+                            if (!catBrands.empty()) {
+                                brandId = catBrands[0].id;
+                            } else {
+                                brandId = brandRepo.getOrCreate("General");
+                            }
                         }
 
-                        int categoryId = 0;
-                        if (!body.contains("categoryId") || !ControllerUtils::parseStrictIntField(body, "categoryId", 1, 1000000000, categoryId, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, "A valid category must be selected", allowedOrigin);
+                        if (!catRepo.hasBrand(categoryId, brandId)) {
+                            if (body.contains("brandId") && !body.contains("brandName") && !body.contains("brand")) {
+                                return ControllerUtils::errorResponse(400, "The selected brand is not associated with the selected category", allowedOrigin);
+                            } else {
+                                catRepo.addBrand(categoryId, brandId);
+                            }
                         }
 
                         int stock = 0;
                         if (body.contains("stock")) {
                             if (!ControllerUtils::parseStrictIntField(body, "stock", 0, 10000000, stock, fieldErr)) {
+                                return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                            }
+                        } else if (body.contains("quantity")) {
+                            if (!ControllerUtils::parseStrictIntField(body, "quantity", 0, 10000000, stock, fieldErr)) {
                                 return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
                             }
                         }
@@ -350,20 +476,53 @@ public:
                         }
 
                         Transaction tx(db);
-                        if (repo.findBySku(sku).has_value()) {
-                            return ControllerUtils::errorResponse(409, "A product with this SKU already exists", allowedOrigin);
+
+                        // 1. DUPLICATE PREVENTION (ADD TO EXISTING STOCK)
+                        auto existingOpt = repo.findBySku(sku);
+                        if (existingOpt.has_value()) {
+                            auto existing = *existingOpt;
+                            std::string existingNorm = normalizeName(existing->getName());
+                            std::string inputNorm = normalizeName(name);
+
+                            if (existingNorm == inputNorm && (categoryId == 0 || existing->getCategoryId() == categoryId)) {
+                                // EXACT SAME ITEM: Do NOT create a new record. Increase quantity of existing item.
+                                int oldStock = existing->getStock();
+                                int newStock = oldStock + stock;
+                                repo.updateStock(existing->getId(), newStock);
+
+                                if (existing->getType() == ProductType::PERISHABLE || !expiryDate.empty()) {
+                                    ProductBatchRepository batchRepo(db);
+                                    std::string bExp = !expiryDate.empty() ? expiryDate : parseExpiryDate(body);
+                                    if (!bExp.empty()) {
+                                        std::string bNum = (body.contains("batchNumber") && body["batchNumber"].is_string())
+                                            ? body["batchNumber"].get<std::string>()
+                                            : ("BATCH-" + std::to_string(existing->getId()) + "-" + bExp);
+                                        batchRepo.addBatch(existing->getId(), bNum, stock, bExp);
+                                        batchRepo.updateProductNearestExpiry(existing->getId());
+                                    }
+                                }
+
+                                InventoryRepository invRepo(db);
+                                invRepo.recordMovement(existing->getId(), MovementType::ADDITION, stock, oldStock, newStock,
+                                                       "Restock / Duplicate item addition: " + std::to_string(stock) + " units");
+
+                                tx.commit();
+                                auto updated = repo.findById(existing->getId());
+                                nlohmann::json respData = productToJson(**updated, db);
+                                respData["isRestocked"] = true;
+                                respData["addedQuantity"] = stock;
+                                respData["previousStock"] = oldStock;
+                                respData["currentStock"] = newStock;
+                                return ControllerUtils::successResponse(respData, "Existing item detected. Stock successfully increased by " + std::to_string(stock) + " units.", allowedOrigin, 200);
+                            } else {
+                                // Same barcode assigned to a different product -> conflict error!
+                                return ControllerUtils::errorResponse(409, "Barcode/SKU '" + sku + "' is already assigned to a different product: '" + existing->getName() + "'", allowedOrigin);
+                            }
                         }
 
-                        CategoryRepository catRepo(db);
-                        if (!catRepo.findById(categoryId).has_value()) {
-                            return ControllerUtils::errorResponse(400, "Referenced categoryId does not exist", allowedOrigin);
-                        }
-                        if (!catRepo.hasBrand(categoryId, brandId)) {
-                            return ControllerUtils::errorResponse(400, "The selected brand is not associated with the selected category", allowedOrigin);
-                        }
-
+                        // NEW ITEM: Create record
                         int newId = 0;
-                        if (productTypeUpper == "PERISHABLE") {
+                        if (productTypeUpper == "PERISHABLE" || !expiryDate.empty()) {
                             Perishable p(0, sku, name, brandId, categoryId, priceInPaise, stock, expiryDate, strategy);
                             newId = repo.insert(p);
                         } else {
@@ -374,6 +533,14 @@ public:
                         if (stock > 0) {
                             InventoryRepository invRepo(db);
                             invRepo.recordMovement(newId, MovementType::ADDITION, stock, 0, stock, "Initial product stock");
+                        }
+
+                        if (!expiryDate.empty() && stock > 0) {
+                            ProductBatchRepository batchRepo(db);
+                            std::string bNum = (body.contains("batchNumber") && body["batchNumber"].is_string())
+                                ? body["batchNumber"].get<std::string>()
+                                : ("BATCH-" + std::to_string(newId) + "-" + expiryDate);
+                            batchRepo.addBatch(newId, bNum, stock, expiryDate);
                         }
 
                         tx.commit();
@@ -465,8 +632,8 @@ public:
                             }
                             std::string inputSku = ControllerUtils::trimCopy(body["sku"].get<std::string>());
                             if (inputSku != p->getSku()) {
-                                if (!isValidThreeDigitCode(inputSku)) {
-                                    return ControllerUtils::errorResponse(400, "Product code must contain exactly three numeric digits (e.g. 001, 025, 999)", allowedOrigin);
+                                if (!isValidBarcodeOrCode(inputSku)) {
+                                    return ControllerUtils::errorResponse(400, "Product code/barcode must contain only numeric digits (minimum 3 digits, e.g. 001, 123456)", allowedOrigin);
                                 }
                                 if (repo.findBySku(inputSku).has_value()) {
                                     return ControllerUtils::errorResponse(409, "A product with this SKU already exists", allowedOrigin);
@@ -521,11 +688,13 @@ public:
                             return ControllerUtils::errorResponse(400, "Referenced categoryId does not exist", allowedOrigin);
                         }
                         if (!catRepo.hasBrand(categoryId, brandId)) {
-                            return ControllerUtils::errorResponse(400, "The selected brand is not associated with the selected category", allowedOrigin);
+                            catRepo.addBrand(categoryId, brandId);
                         }
 
                         int stock = p->getStock();
                         if (body.contains("stock") && !ControllerUtils::parseStrictIntField(body, "stock", 0, 10000000, stock, fieldErr)) {
+                            return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                        } else if (body.contains("quantity") && !ControllerUtils::parseStrictIntField(body, "quantity", 0, 10000000, stock, fieldErr)) {
                             return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
                         }
 
@@ -549,9 +718,67 @@ public:
                             return ControllerUtils::errorResponse(400, ex.what(), allowedOrigin);
                         }
 
+                        // 3. EDITING EXISTING ITEMS DAILY (Track Price & Discount History)
+                        bool priceChanged = (p->getPriceInPaise() != priceInPaise);
+
+                        std::string oldDType = "NONE";
+                        double oldDVal = 0.0;
+                        if (p->getDiscount()) {
+                            if (p->getDiscount()->getType() == DiscountType::PERCENTAGE) {
+                                oldDType = "PERCENTAGE"; oldDVal = p->getDiscount()->getValue();
+                            } else if (p->getDiscount()->getType() == DiscountType::FIXED) {
+                                oldDType = "FIXED"; oldDVal = p->getDiscount()->getValue();
+                            }
+                        }
+
+                        std::string newDType = "NONE";
+                        double newDVal = 0.0;
+                        if (strategy) {
+                            if (strategy->getType() == DiscountType::PERCENTAGE) {
+                                newDType = "PERCENTAGE"; newDVal = strategy->getValue();
+                            } else if (strategy->getType() == DiscountType::FIXED) {
+                                newDType = "FIXED"; newDVal = strategy->getValue();
+                            }
+                        }
+                        bool discountChanged = (oldDType != newDType || std::abs(oldDVal - newDVal) > 0.001);
+
+                        if (priceChanged || discountChanged) {
+                            PreparedStatement phStmt(db, R"(
+                                INSERT INTO price_history (product_id, old_price_paise, new_price_paise,
+                                                           old_discount_type, new_discount_type,
+                                                           old_discount_value, new_discount_value, notes)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+                            )");
+                            phStmt.bind(1, id);
+                            phStmt.bind(2, p->getPriceInPaise());
+                            phStmt.bind(3, priceInPaise);
+                            phStmt.bind(4, oldDType);
+                            phStmt.bind(5, newDType);
+                            phStmt.bind(6, oldDVal);
+                            phStmt.bind(7, newDVal);
+                            std::string notes = "Daily item update: ";
+                            if (priceChanged) notes += "Price updated from Rs " + std::to_string(p->getPrice()) + " to Rs " + std::to_string(priceInPaise / 100.0) + ". ";
+                            if (discountChanged) notes += "Discount updated to " + newDType + " (" + std::to_string(newDVal) + ").";
+                            phStmt.bind(8, notes);
+                            phStmt.execute();
+                        }
+
+                        // Track Inventory Movement on Stock Adjustment
+                        if (stock != p->getStock()) {
+                            int diff = stock - p->getStock();
+                            InventoryRepository invRepo(db);
+                            invRepo.recordMovement(id, MovementType::ADJUSTMENT, diff, p->getStock(), stock,
+                                                   "Daily inventory adjustment via product edit");
+                        }
+
                         if (productTypeUpper == "PERISHABLE") {
                             Perishable updated(id, sku, name, brandId, categoryId, priceInPaise, stock, expiryDate, strategy);
                             repo.update(updated);
+
+                            if (!expiryDate.empty()) {
+                                ProductBatchRepository batchRepo(db);
+                                batchRepo.updateProductNearestExpiry(id);
+                            }
                         } else {
                             NonPerishable updated(id, sku, name, brandId, categoryId, priceInPaise, stock, strategy);
                             repo.update(updated);
@@ -577,6 +804,97 @@ public:
                         {"deleted", true}
                     };
                     return ControllerUtils::successResponse(data, "Product deactivated successfully", allowedOrigin);
+                }
+
+                return ControllerUtils::errorResponse(405, "Method Not Allowed", allowedOrigin);
+            }
+        );
+
+        // GET /api/products/{id}/batches & POST /api/products/{id}/batches
+        CROW_ROUTE(app, "/api/products/<int>/batches").methods("GET"_method, "POST"_method, "OPTIONS"_method)(
+            [&db, &auth, allowedOrigin](const crow::request& req, int id) {
+                if (req.method == "OPTIONS"_method) {
+                    return ControllerUtils::corsPreflight(allowedOrigin);
+                }
+
+                ProductRepository repo(db);
+                auto productOpt = repo.findById(id);
+                if (!productOpt.has_value()) {
+                    return ControllerUtils::errorResponse(404, "Product not found", allowedOrigin);
+                }
+
+                ProductBatchRepository batchRepo(db);
+
+                if (req.method == "GET"_method) {
+                    auto batches = batchRepo.getBatchesByProductId(id);
+                    nlohmann::json arr = nlohmann::json::array();
+                    for (const auto& b : batches) {
+                        arr.push_back({
+                            {"id", b.getId()},
+                            {"productId", b.getProductId()},
+                            {"batchNumber", b.getBatchNumber()},
+                            {"quantity", b.getQuantity()},
+                            {"expiryDate", b.getExpiryDate()},
+                            {"isExpired", b.isExpired()},
+                            {"daysUntilExpiry", b.getDaysUntilExpiry()},
+                            {"status", b.getStatus()},
+                            {"createdAt", b.getCreatedAt()}
+                        });
+                    }
+                    return ControllerUtils::successResponse(arr, "Batches retrieved", allowedOrigin);
+                }
+
+                if (req.method == "POST"_method) {
+                    crow::response err;
+                    if (!ControllerUtils::requireAdmin(req, auth, allowedOrigin, err)) {
+                        return err;
+                    }
+
+                    nlohmann::json body;
+                    if (!ControllerUtils::parseJsonObject(req, body, allowedOrigin, err)) {
+                        return err;
+                    }
+
+                    int quantity = 0;
+                    std::string fieldErr;
+                    if (!ControllerUtils::parseStrictIntField(body, "quantity", 1, 1000000, quantity, fieldErr)) {
+                        return ControllerUtils::errorResponse(400, "Quantity must be a positive integer", allowedOrigin);
+                    }
+
+                    std::string expiryDate = parseExpiryDate(body);
+                    if (expiryDate.empty()) {
+                        return ControllerUtils::errorResponse(400, "Valid expiryDate (YYYY-MM-DD) is required", allowedOrigin);
+                    }
+
+                    std::string batchNumber = "BATCH-" + std::to_string(id) + "-" + expiryDate;
+                    if (body.contains("batchNumber") && body["batchNumber"].is_string()) {
+                        batchNumber = ControllerUtils::trimCopy(body["batchNumber"].get<std::string>());
+                    }
+
+                    Transaction tx(db);
+                    int batchId = batchRepo.addBatch(id, batchNumber, quantity, expiryDate);
+
+                    auto prod = *productOpt;
+                    int oldStock = prod->getStock();
+                    int newStock = oldStock + quantity;
+                    repo.updateStock(id, newStock);
+
+                    batchRepo.updateProductNearestExpiry(id);
+
+                    InventoryRepository invRepo(db);
+                    invRepo.recordMovement(id, MovementType::ADDITION, quantity, oldStock, newStock,
+                                           "New batch added: " + batchNumber + " (" + std::to_string(quantity) + " units, exp: " + expiryDate + ")");
+
+                    tx.commit();
+
+                    nlohmann::json data = {
+                        {"batchId", batchId},
+                        {"batchNumber", batchNumber},
+                        {"quantity", quantity},
+                        {"expiryDate", expiryDate},
+                        {"newTotalStock", newStock}
+                    };
+                    return ControllerUtils::successResponse(data, "Batch added successfully", allowedOrigin, 201);
                 }
 
                 return ControllerUtils::errorResponse(405, "Method Not Allowed", allowedOrigin);

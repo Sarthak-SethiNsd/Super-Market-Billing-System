@@ -254,4 +254,56 @@ void DatabaseMigrator::migrate(DatabaseConnection& conn) {
         setVersion(conn, 4);
         currentVersion = 4;
     }
+
+    if (currentVersion < 5) {
+        Transaction tx(conn);
+
+        // 13. Product Batches Table (Multiple Expiry Dates & FEFO Support)
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS product_batches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                batch_number TEXT NOT NULL,
+                quantity INTEGER NOT NULL CHECK (quantity >= 0),
+                expiry_date TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            );
+        )");
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_batches_product ON product_batches(product_id);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_batches_expiry ON product_batches(expiry_date);");
+
+        // Seed initial batches from existing perishable products
+        conn.execute(R"(
+            INSERT INTO product_batches (product_id, batch_number, quantity, expiry_date)
+            SELECT id, 'BATCH-' || id || '-INITIAL', stock, expiry_date
+            FROM products
+            WHERE product_type = 'PERISHABLE' AND expiry_date IS NOT NULL AND expiry_date != '' AND stock > 0;
+        )");
+
+        // 14. Price & Discount History Table (Daily Editing & Audit Trail)
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS price_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                old_price_paise INTEGER NOT NULL,
+                new_price_paise INTEGER NOT NULL,
+                old_discount_type TEXT NOT NULL,
+                new_discount_type TEXT NOT NULL,
+                old_discount_value REAL NOT NULL,
+                new_discount_value REAL NOT NULL,
+                notes TEXT,
+                changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            );
+        )");
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_price_history_time ON price_history(changed_at);");
+
+        tx.commit();
+        setVersion(conn, 5);
+        currentVersion = 5;
+    }
 }

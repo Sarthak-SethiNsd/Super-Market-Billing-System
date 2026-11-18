@@ -67,6 +67,7 @@ set(DOMAIN_SOURCES
     src/repositories/InventoryRepository.cpp
     src/repositories/BillRepository.cpp
     src/repositories/CustomerRepository.cpp
+    src/repositories/ProductBatchRepository.cpp
 )
 
 # Reusable Static Domain and Persistence Library
