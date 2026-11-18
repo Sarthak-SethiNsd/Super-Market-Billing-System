@@ -28,23 +28,25 @@ The system employs a multi-layered verification strategy:
 
 ## 2. Automated C++ Test Suites (CTest)
 
-The C++ backend includes **5 dedicated test executables** comprising **34 automated test cases**:
+The C++ backend includes **5 dedicated test executables** comprising **39 automated test cases**:
 
 ### 2.1 DiscountSuite (`test_discounts.cpp`)
-- **Scope:** 5 Test Cases (100% Pass)
+- **Scope:** 6 Test Cases (100% Pass)
 - `testPercentageDiscount`: Verifies exact integer paise calculations for fractional discounts.
 - `testFixedAmountDiscount`: Verifies flat deductions in paise.
 - `testInvalidPercentageRejection`: Rejects percentages $< 0\%$ or $> 100\%$.
 - `testNegativeFixedDiscountRejection`: Rejects negative discount amounts.
 - `testFixedDiscountExceedingProductPrice`: Ensures discount cannot exceed base unit price (price cannot drop below ₹0.00).
+- `testCustomExceptionHierarchyAndPolymorphism`: Verifies polymorphic catching via `const ISupermarketException&` and `std::exception&`.
 
 ### 2.2 InventorySuite (`test_inventory.cpp`)
-- **Scope:** 5 Test Cases (100% Pass)
+- **Scope:** 6 Test Cases (100% Pass)
 - `testStockReductionValid`: Verifies stock decreases accurately.
-- `testInsufficientStockRejection`: Verifies `std::runtime_error` is thrown when decrement exceeds available inventory.
+- `testInsufficientStockRejection`: Verifies `InsufficientStockException` is thrown when decrement exceeds available inventory.
 - `testNegativeStockPrevention`: Guards against negative stock parameters.
 - `testProductIdentityBasedOnId`: Verifies domain object equality based on unique identifiers.
 - `testStockInfoNestedClass`: Verifies encapsulation of the internal `StockInfo` class.
+- `testQuantityExceptionsAndStockBoundaries`: Verifies `InvalidQuantityException` derivation and rejection of zero/negative quantities.
 
 ### 2.3 BillingSuite (`test_billing.cpp`)
 - **Scope:** 6 Test Cases (100% Pass)
@@ -53,21 +55,23 @@ The C++ backend includes **5 dedicated test executables** comprising **34 automa
 - `testHistoricalSnapshotImmutability`: Proves that modifying a product's price does not alter existing bill items.
 - `testOperatorOverloads`: Tests `Bill::operator+=`, `operator+`, `operator==`, and `operator<`.
 - `testDiamondInheritance`: Validates virtual inheritance resolving `Person` via `Manager`.
-- `testGenericTemplates`: Verifies instantiation and type safety of `Repository<T>`.
+- `testGenericTemplates`: Verifies instantiation and type safety of `Repository<T>` and `ApiResponse<T>`.
 
 ### 2.4 DatabaseSuite (`test_database.cpp`)
-- **Scope:** 6 Test Cases (100% Pass)
-- `testDatabaseInitialization`: Verifies tables, WAL mode, and foreign keys.
+- **Scope:** 8 Test Cases (100% Pass)
+- `testDatabaseInitialization`: Verifies tables, WAL mode, foreign keys, and migration versions up to v6.
 - `testBrandAndCategoryRepositories`: Verifies CRUD and unique constraint checks.
 - `testProductRepositoryCrudAndPolymorphism`: Verifies persistence of `Perishable` and `NonPerishable` records.
 - `testBillingPersistenceAndStockSafety`: Verifies atomic invoice creation with stock deduction.
 - `testTransactionRollbackOnStockFailure`: Injects a failure into a multi-item bill and proves the entire transaction rolls back cleanly.
 - `testFailureRecoveryAndTransactionRollback`: Tests database stability under simulated connection interruptions.
+- `testCustomerRepository`: Verifies CRM customer creation, spending calculations, and loyalty lookups.
+- `testProductReservationRepository`: Verifies multi-session cart stock hold reservations and TTL expiration.
 
 ### 2.5 ApiSuite (`test_api.cpp`)
-- **Scope:** 12 Test Cases (100% Pass)
+- **Scope:** 13 Test Cases (100% Pass)
 - 1. Health Endpoint Test (`/api/health`).
-- 2. Admin Authentication & Session Management.
+- 2. Staff Authentication & Session Management.
 - 3. RBAC Route Protection (verifies unauthenticated mutations return `401`/`403`).
 - 4. Brands & Categories Management.
 - 5. Product Creation & Filtering.
@@ -78,6 +82,7 @@ The C++ backend includes **5 dedicated test executables** comprising **34 automa
 - 10. Inventory Adjustment Contracts Audit.
 - 11. Admin Logout & Session Invalidation.
 - 12. Cross-Platform PBKDF2-HMAC-SHA256 Compatibility (Windows CNG vs. OpenSSL test vectors).
+- 13. Multi-Session Cart Reservation & Reserved Stock Isolation.
 
 ---
 
@@ -125,13 +130,13 @@ From `Supermarket_Management_System/backend/build/tests/Release/`:
 
 | Test Suite | Total Cases | Passed | Failed | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **DiscountSuite** | 5 | 5 | 0 | **PASS** |
-| **InventorySuite** | 5 | 5 | 0 | **PASS** |
+| **DiscountSuite** | 6 | 6 | 0 | **PASS** |
+| **InventorySuite** | 6 | 6 | 0 | **PASS** |
 | **BillingSuite** | 6 | 6 | 0 | **PASS** |
-| **DatabaseSuite** | 6 | 6 | 0 | **PASS** |
-| **ApiSuite** | 12 | 12 | 0 | **PASS** |
+| **DatabaseSuite** | 8 | 8 | 0 | **PASS** |
+| **ApiSuite** | 13 | 13 | 0 | **PASS** |
 | **Frontend TypeScript Build** | N/A | Pass | 0 | **PASS** |
-| **Total Automated Coverage** | **34** | **34** | **0** | **100% PASS** |
+| **Total Automated Coverage** | **39** | **39** | **0** | **100% PASS** |
 
 ---
 

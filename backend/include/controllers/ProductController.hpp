@@ -523,6 +523,13 @@ public:
                             productTypeUpper = normalizeProductType(productTypeRaw);
                             strategy = parseDiscountStrategy(body);
                             expiryDate = parseExpiryDate(body);
+
+                            if (strategy && strategy->getType() == DiscountType::FIXED) {
+                                auto fixedStrat = std::dynamic_pointer_cast<FixedAmountDiscount>(strategy);
+                                if (fixedStrat && fixedStrat->getAmountInPaise() > priceInPaise) {
+                                    throw InvalidDiscountException("Fixed discount amount cannot exceed unit price");
+                                }
+                            }
                         } catch (const std::exception& ex) {
                             return ControllerUtils::errorResponse(400, ex.what(), allowedOrigin);
                         }
@@ -531,6 +538,16 @@ public:
 
                         // 1. DUPLICATE PREVENTION (ADD TO EXISTING STOCK)
                         auto existingOpt = repo.findBySku(sku);
+                        if (!existingOpt.has_value()) {
+                            auto allProds = repo.getAll(true);
+                            std::string inputNorm = normalizeName(name);
+                            for (const auto& prod : allProds) {
+                                if (normalizeName(prod->getName()) == inputNorm && (categoryId == 0 || prod->getCategoryId() == categoryId)) {
+                                    existingOpt = prod;
+                                    break;
+                                }
+                            }
+                        }
                         if (existingOpt.has_value()) {
                             auto existing = *existingOpt;
                             std::string existingNorm = normalizeName(existing->getName());
@@ -803,6 +820,13 @@ public:
                             }
                             productTypeUpper = normalizeProductType(productTypeRaw);
                             expiryDate = parseExpiryDate(body);
+
+                            if (strategy && strategy->getType() == DiscountType::FIXED) {
+                                auto fixedStrat = std::dynamic_pointer_cast<FixedAmountDiscount>(strategy);
+                                if (fixedStrat && fixedStrat->getAmountInPaise() > priceInPaise) {
+                                    throw InvalidDiscountException("Fixed discount amount cannot exceed unit price");
+                                }
+                            }
                         } catch (const std::exception& ex) {
                             return ControllerUtils::errorResponse(400, ex.what(), allowedOrigin);
                         }
@@ -860,7 +884,7 @@ public:
                                                    "Daily inventory adjustment via product edit");
                         }
 
-                        if (productTypeUpper == "PERISHABLE") {
+                        if (productTypeUpper == "PERISHABLE" || !expiryDate.empty()) {
                             // Retain existing expiry date if not provided in the request body
                             if (expiryDate.empty() && p->getType() == ProductType::PERISHABLE) {
                                 const auto* oldPer = dynamic_cast<const Perishable*>(p.get());
@@ -882,28 +906,19 @@ public:
                                 if (bCount == 0) {
                                     // Create initial batch with the edited expiry date
                                     batchRepo.addBatch(id, "BATCH-" + std::to_string(id) + "-" + expiryDate, stock, expiryDate);
-                                } else if (bCount == 1) {
-                                    // Exactly one batch exists: update its expiry date and synchronize quantity directly
-                                    PreparedStatement updateBatchStmt(db, "UPDATE product_batches SET expiry_date = ?, quantity = ? WHERE product_id = ?;");
-                                    updateBatchStmt.bind(1, expiryDate);
-                                    updateBatchStmt.bind(2, stock);
-                                    updateBatchStmt.bind(3, id);
-                                    updateBatchStmt.execute();
                                 } else {
-                                    // Multiple batches exist: update the nearest/active batch date to the new expiry date
-                                    PreparedStatement updateBatchStmt(db, R"(
-                                        UPDATE product_batches
-                                        SET expiry_date = ?
-                                        WHERE id = (
-                                            SELECT id FROM product_batches
-                                            WHERE product_id = ?
-                                            ORDER BY expiry_date ASC, id ASC
-                                            LIMIT 1
-                                        );
-                                    )");
+                                    // Synchronize expiry date to product_batches
+                                    PreparedStatement updateBatchStmt(db, "UPDATE product_batches SET expiry_date = ? WHERE product_id = ?;");
                                     updateBatchStmt.bind(1, expiryDate);
                                     updateBatchStmt.bind(2, id);
                                     updateBatchStmt.execute();
+
+                                    if (bCount == 1) {
+                                        PreparedStatement updateQtyStmt(db, "UPDATE product_batches SET quantity = ? WHERE product_id = ?;");
+                                        updateQtyStmt.bind(1, stock);
+                                        updateQtyStmt.bind(2, id);
+                                        updateQtyStmt.execute();
+                                    }
                                 }
 
                                 // Update product's nearest expiry date

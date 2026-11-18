@@ -46,7 +46,7 @@ Run the automated verification script:
    - `supermarket_server.exe`
    - `supermarket_seeder.exe`
    - 5 CTest test executables (`test_discounts.exe`, `test_inventory.exe`, `test_billing.exe`, `test_database.exe`, `test_api.exe`)
-4. Executes all **5 CTest test suites** (34/34 passing test cases).
+4. Executes all **5 CTest test suites** (39/39 passing test cases).
 5. Runs the frontend production build: `tsc -b && vite build` (outputs to `frontend/dist/`).
 
 ---
@@ -56,7 +56,7 @@ Run the automated verification script:
 The application stores all data in a single local SQLite database at:
 $$\mathbf{backend/data/supermarket.db}$$
 
-The database already comes pre-seeded with 25 Indian supermarket products, 7 categories, 19 brands, and a demonstration staff account (`admin123`).
+The database already comes pre-seeded with 25 Indian supermarket products, 7 categories, 19 brands, and a demonstration staff account (`Staff@123` or `admin123`).
 
 If you ever wish to re-seed or verify the database idempotently:
 ```powershell

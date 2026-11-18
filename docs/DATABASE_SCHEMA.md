@@ -8,25 +8,32 @@
 - [5. Detailed Table Definitions](#5-detailed-table-definitions)
   - [5.1 `brands`](#51-brands)
   - [5.2 `categories`](#52-categories)
-  - [5.3 `products`](#53-products)
-  - [5.4 `bills`](#54-bills)
-  - [5.5 `bill_items`](#55-bill_items)
-  - [5.6 `inventory_movements`](#56-inventory_movements)
-  - [5.7 `users`](#57-users)
+  - [5.3 `category_brands`](#53-category_brands)
+  - [5.4 `products`](#54-products)
+  - [5.5 `product_batches` (FEFO Batches)](#55-product_batches-fefo-batches)
+  - [5.6 `price_history` (Audit Log)](#56-price_history-audit-log)
+  - [5.7 `product_reservations` (Cart Holds)](#57-product_reservations-cart-holds)
+  - [5.8 `customers`](#58-customers)
+  - [5.9 `bills`](#59-bills)
+  - [5.10 `bill_items`](#510-bill_items)
+  - [5.11 `inventory_movements`](#511-inventory_movements)
+  - [5.12 `users`](#512-users)
+  - [5.13 `system_metadata`](#513-system_metadata)
 - [6. Financial Data Representation (Paise Currency Invariant)](#6-financial-data-representation-paise-currency-invariant)
-- [7. Immutable Historical Snapshots](#7-immutable-historical-snapshots)
-- [8. Backup and Restore Procedures](#8-backup-and-restore-procedures)
+- [7. Multi-Session Cart Reservation Mechanics](#7-multi-session-cart-reservation-mechanics)
+- [8. Immutable Historical Snapshots](#8-immutable-historical-snapshots)
+- [9. Backup and Restore Procedures](#9-backup-and-restore-procedures)
 
 ---
 
 ## 1. Canonical Database Path
 
-All components of the Supermarket Billing & Inventory Management System (the C++ server, PowerShell launcher, C++ seeder, and Python seeder) target a single canonical local SQLite database file:
+All components of the Supermarket Billing & Inventory Management System (the C++ server, PowerShell launcher, C++ seeder, and automated test runners) target a single canonical local SQLite database file:
 
 $$\mathbf{backend/data/supermarket.db}$$
 
-- **Full Windows Workspace Path:**  
-  `C:\Users\LENOVO\Desktop\OOPS-Sem-III-Lab\Supermarket_Submission_Staging\Supermarket_Management_System\backend\data\supermarket.db`
+- **Windows Workspace Path:**  
+  `backend\data\supermarket.db`
 - **Sidecar Files (WAL Mode):**
   - `backend/data/supermarket.db-wal` (Write-Ahead Log)
   - `backend/data/supermarket.db-shm` (Shared-Memory Index)
@@ -45,24 +52,23 @@ PRAGMA synchronous = NORMAL;
 ```
 - **WAL Mode:** Permits non-blocking concurrent readers during write transactions.
 - **Foreign Keys:** Strict referential integrity enforcement on all child relationships.
+- **Synchronous Normal:** Ensures ACID durability while minimizing unnecessary fsync operations on solid-state drives.
 
 ---
 
 ## 3. Schema Migrations (`DatabaseMigrator`)
 
-Schema evolution is automated via `DatabaseMigrator::migrate(DatabaseConnection& db)`.
+Schema evolution is automated via `DatabaseMigrator::migrate(DatabaseConnection& conn)`. It uses SQLite's internal version register via `PRAGMA user_version`:
 
-### Version History
+### Migration History
 - **Version 1:** Initial core domain schema (`brands`, `categories`, `products`, `bills`, `bill_items`, `inventory_movements`).
-- **Version 2:** Administrative authentication and user management (`users` table).
+- **Version 2:** Administrative authentication and user management (`users` table with PBKDF2-HMAC-SHA256).
+- **Version 3:** Customer management and CRM snapshotting (`customers` table, customer columns in `bills`, `system_metadata`).
+- **Version 4:** Category-brand taxonomy junction (`category_brands` table with pre-seeded brand-category links).
+- **Version 5:** Multi-batch inventory tracking (`product_batches` table with FEFO indexes) and price modification auditing (`price_history` table).
+- **Version 6:** Multi-session cart stock reservations (`product_reservations` table with TTL index).
 
-A meta-table tracks the applied migration version:
-```sql
-CREATE TABLE IF NOT EXISTS schema_migrations (
-    version INTEGER PRIMARY KEY,
-    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-```
+Migrations execute within an explicit `Transaction` object; if any DDL statement fails, SQLite rolls back the entire transaction and `PRAGMA user_version` remains unchanged.
 
 ---
 
@@ -72,10 +78,16 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 erDiagram
     BRANDS ||--o{ PRODUCTS : manufactures
     CATEGORIES ||--o{ PRODUCTS : classifies
-    PRODUCTS ||--o{ INVENTORY_MOVEMENTS : tracks
-    PRODUCTS ||--o{ BILL_ITEMS : referenced_in
+    CATEGORIES ||--o{ CATEGORY_BRANDS : associates
+    BRANDS ||--o{ CATEGORY_BRANDS : associates
+    PRODUCTS ||--o{ PRODUCT_BATCHES : tracks_batches
+    PRODUCTS ||--o{ PRICE_HISTORY : audits_prices
+    PRODUCTS ||--o{ PRODUCT_RESERVATIONS : holds_in_cart
+    CUSTOMERS ||--o{ BILLS : places
     BILLS ||--|{ BILL_ITEMS : contains
-    USERS ||--o{ BILLS : processed_by
+    PRODUCTS ||--o{ BILL_ITEMS : references
+    PRODUCTS ||--o{ INVENTORY_MOVEMENTS : logs
+    BILLS ||--o{ INVENTORY_MOVEMENTS : triggers
 
     BRANDS {
         int id PK
@@ -86,6 +98,13 @@ erDiagram
     CATEGORIES {
         int id PK
         string name UK
+        datetime created_at
+    }
+
+    CATEGORY_BRANDS {
+        int id PK
+        int category_id FK
+        int brand_id FK
         datetime created_at
     }
 
@@ -106,14 +125,58 @@ erDiagram
         datetime updated_at
     }
 
+    PRODUCT_BATCHES {
+        int id PK
+        int product_id FK
+        string batch_number
+        int quantity
+        string expiry_date
+        datetime created_at
+    }
+
+    PRICE_HISTORY {
+        int id PK
+        int product_id FK
+        int old_price_paise
+        int new_price_paise
+        string old_discount_type
+        string new_discount_type
+        real old_discount_value
+        real new_discount_value
+        string notes
+        datetime changed_at
+    }
+
+    PRODUCT_RESERVATIONS {
+        int id PK
+        string session_id
+        int product_id FK
+        int quantity
+        int expires_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    CUSTOMERS {
+        int id PK
+        string customer_code UK
+        string full_name
+        string phone
+        string email
+        int is_active
+        datetime created_at
+        datetime updated_at
+    }
+
     BILLS {
         int id PK
         string bill_number UK
         int subtotal_paise
         int total_discount_paise
         int final_amount_paise
-        int cashier_id FK
-        string payment_method
+        int customer_id FK
+        string customer_name
+        string customer_phone
         datetime created_at
     }
 
@@ -140,19 +203,8 @@ erDiagram
         int previous_stock
         int new_stock
         string reason
-        string reference_id
+        int related_bill_id FK
         datetime created_at
-    }
-
-    USERS {
-        int id PK
-        string username UK
-        string password_hash
-        string salt
-        int iterations
-        string role
-        datetime created_at
-        datetime last_login
     }
 ```
 
@@ -161,9 +213,9 @@ erDiagram
 ## 5. Detailed Table Definitions
 
 ### 5.1 `brands`
-Stores manufacturer brands.
+Stores registered manufacturer and distributor brands.
 ```sql
-CREATE TABLE brands (
+CREATE TABLE IF NOT EXISTS brands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -171,90 +223,182 @@ CREATE TABLE brands (
 ```
 
 ### 5.2 `categories`
-Stores store department categories.
+Stores product categories and store departments.
 ```sql
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### 5.3 `products`
-The core catalog inventory table.
+### 5.3 `category_brands`
+Junction table relating brands to categories for filtered catalog navigation.
 ```sql
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS category_brands (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL,
+    brand_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+    FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE,
+    UNIQUE(category_id, brand_id)
+);
+```
+
+### 5.4 `products`
+Master store catalog containing current total stock counts and pricing.
+```sql
+CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sku TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    brand_id INTEGER NOT NULL REFERENCES brands(id),
-    category_id INTEGER NOT NULL REFERENCES categories(id),
+    brand_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL,
     product_type TEXT NOT NULL CHECK (product_type IN ('PERISHABLE', 'NON_PERISHABLE')),
     price_in_paise INTEGER NOT NULL CHECK (price_in_paise >= 0),
     stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-    expiry_date TEXT DEFAULT NULL,
+    expiry_date TEXT,
     discount_type TEXT NOT NULL DEFAULT 'NONE' CHECK (discount_type IN ('NONE', 'PERCENTAGE', 'FIXED')),
-    discount_value REAL NOT NULL DEFAULT 0.0,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    discount_value REAL NOT NULL DEFAULT 0.0 CHECK (discount_value >= 0),
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE RESTRICT,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+);
+```
+
+### 5.5 `product_batches` (FEFO Batches)
+Tracks distinct delivery batches for perishable products. Enables First-Expired, First-Out (FEFO) stock deduction during POS sales.
+```sql
+CREATE TABLE IF NOT EXISTS product_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    batch_number TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
+    expiry_date TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_batches_product ON product_batches(product_id);
+CREATE INDEX IF NOT EXISTS idx_batches_expiry ON product_batches(expiry_date);
+```
+
+### 5.6 `price_history` (Audit Log)
+Maintains an immutable historical audit log of every price and discount modification performed by staff.
+```sql
+CREATE TABLE IF NOT EXISTS price_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    old_price_paise INTEGER NOT NULL,
+    new_price_paise INTEGER NOT NULL,
+    old_discount_type TEXT NOT NULL,
+    new_discount_type TEXT NOT NULL,
+    old_discount_value REAL NOT NULL,
+    new_discount_value REAL NOT NULL,
+    notes TEXT,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_price_history_product ON price_history(product_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_time ON price_history(changed_at);
+```
+
+### 5.7 `product_reservations` (Cart Holds)
+Enforces multi-session stock reservations with a 15-minute Time-To-Live (TTL).
+```sql
+CREATE TABLE IF NOT EXISTS product_reservations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    expires_at INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE(session_id, product_id)
+);
+CREATE INDEX IF NOT EXISTS idx_reservations_session ON product_reservations(session_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_product ON product_reservations(product_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_expires ON product_reservations(expires_at);
+```
+
+### 5.8 `customers`
+Customer directory for CRM, contact info, and loyalty checkout linking.
+```sql
+CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_code TEXT NOT NULL UNIQUE,
+    full_name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-### 5.4 `bills`
-Represents finalized customer checkout transactions.
+### 5.9 `bills` (Sales Invoices)
+Invoice headers representing finalized sales transactions.
 ```sql
-CREATE TABLE bills (
+CREATE TABLE IF NOT EXISTS bills (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     bill_number TEXT NOT NULL UNIQUE,
-    subtotal_paise INTEGER NOT NULL,
-    total_discount_paise INTEGER NOT NULL,
-    final_amount_paise INTEGER NOT NULL,
-    cashier_id INTEGER,
-    payment_method TEXT DEFAULT 'CASH',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    subtotal_paise INTEGER NOT NULL CHECK (subtotal_paise >= 0),
+    total_discount_paise INTEGER NOT NULL CHECK (total_discount_paise >= 0),
+    final_amount_paise INTEGER NOT NULL CHECK (final_amount_paise >= 0),
+    customer_id INTEGER,
+    customer_name TEXT,
+    customer_phone TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 ```
 
-### 5.5 `bill_items`
-Immutable historical snapshot of each line item in a finalized bill.
+### 5.10 `bill_items` (Historical Line-Item Snapshots)
+Immutable line items captured at checkout time.
 ```sql
-CREATE TABLE bill_items (
+CREATE TABLE IF NOT EXISTS bill_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    bill_id INTEGER NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES products(id),
+    bill_id INTEGER NOT NULL,
+    product_id INTEGER,
     product_name TEXT NOT NULL,
     brand_name TEXT NOT NULL,
     unit_price_paise INTEGER NOT NULL,
-    discount_type TEXT NOT NULL DEFAULT 'NONE',
-    discount_value REAL NOT NULL DEFAULT 0.0,
-    unit_discount_paise INTEGER NOT NULL DEFAULT 0,
+    discount_type TEXT NOT NULL,
+    discount_value REAL NOT NULL,
+    unit_discount_paise INTEGER NOT NULL,
     final_unit_price_paise INTEGER NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
-    line_total_paise INTEGER NOT NULL
+    line_total_paise INTEGER NOT NULL CHECK (line_total_paise >= 0),
+    FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 );
 ```
 
-### 5.6 `inventory_movements`
-The append-only audit trail logging every stock modification.
+### 5.11 `inventory_movements` (Immutable Audit Ledger)
+Append-only log recording every stock change in the supermarket.
 ```sql
-CREATE TABLE inventory_movements (
+CREATE TABLE IF NOT EXISTS inventory_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL REFERENCES products(id),
+    product_id INTEGER NOT NULL,
     movement_type TEXT NOT NULL CHECK (movement_type IN ('ADDITION', 'REDUCTION', 'SALE', 'ADJUSTMENT')),
     quantity_change INTEGER NOT NULL,
     previous_stock INTEGER NOT NULL,
     new_stock INTEGER NOT NULL,
-    reason TEXT NOT NULL,
-    reference_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    reason TEXT,
+    related_bill_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    FOREIGN KEY (related_bill_id) REFERENCES bills(id) ON DELETE SET NULL
 );
 ```
 
-### 5.7 `users`
-Stores salted PBKDF2 credential hashes for administrative authentication.
+### 5.12 `users` (Staff Credentials)
+Stores password hashes and cryptographically secure salts.
 ```sql
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
@@ -262,7 +406,17 @@ CREATE TABLE users (
     iterations INTEGER NOT NULL DEFAULT 100000,
     role TEXT NOT NULL CHECK (role IN ('ADMIN', 'STAFF')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 5.13 `system_metadata`
+Key-value storage for initialization flags and system configuration.
+```sql
+CREATE TABLE IF NOT EXISTS system_metadata (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -270,43 +424,47 @@ CREATE TABLE users (
 
 ## 6. Financial Data Representation (Paise Currency Invariant)
 
-To guarantee exact accounting without binary floating-point drift:
-- All monetary columns (`price_in_paise`, `subtotal_paise`, `total_discount_paise`, `final_amount_paise`, `line_total_paise`) are stored as **integers representing paise**.
-- In the C++ domain, they map to `int64_t`.
-- Conversion to Indian Rupees (`₹`) is performed strictly at the presentation boundary:
-  $$\text{Rupees} = \frac{\text{priceInPaise}}{100.0}$$
+To guarantee that calculations never suffer from IEEE 754 binary floating-point rounding drift, all monetary fields strictly utilize signed 64-bit integer paise (`int64_t`):
+
+$$1\text{ Rupee} = 100\text{ Paise}$$
+
+- **Product Price:** A ₹295.00 shelf price is stored as `29500`.
+- **Percentage Discount Calculation:**
+  $$\text{discountPaise} = \text{round}\left(\frac{\text{priceInPaise} \times \text{percent}}{100.0}\right)$$
+- **Non-Negative Clamping:**
+  $$\text{finalUnitPricePaise} = \max\bigl(0,\, \text{priceInPaise} - \text{discountPaise}\bigr)$$
+- **Line Item Total:**
+  $$\text{lineTotalPaise} = \text{finalUnitPricePaise} \times \text{quantity}$$
 
 ---
 
-## 7. Immutable Historical Snapshots
+## 7. Multi-Session Cart Reservation Mechanics
 
-When a bill is finalized in `BillRepository::createBill`:
-1. The line item's current name, brand, unit price, applied discount strategy, and computed line total are cloned into `bill_items`.
-2. Even if a product's master price is subsequently edited or the product is soft-deactivated, past receipts rendered from `bill_items` remain permanently immutable.
+To guarantee fair inventory distribution among concurrent online shoppers and in-store cashiers:
+1. **Hold Reservation:** `POST /api/cart/reserve` creates an entry in `product_reservations` with a 15-minute TTL.
+2. **Dynamic Stock Calculation:**
+   $$\text{availableStock} = \max\bigl(0,\, \text{totalStock} - \text{reservedStock}\bigr)$$
+3. **Atomic Checkout Clearance:** During invoice generation (`POST /api/bills`), all reservations tied to `sessionId` are atomically deleted within the same database transaction.
 
 ---
 
-## 8. Backup and Restore Procedures
+## 8. Immutable Historical Snapshots
 
-### Safe Live Backup (WAL Truncation First)
-Because SQLite in WAL mode splits active data across `supermarket.db` and `supermarket.db-wal`, a safe backup should checkpoint the WAL before copying:
+Supermarket invoices must remain legally and financially immutable:
+- If a product's price increases from ₹50 to ₹60 next month, past invoices must continue to reflect ₹50.
+- If a promotional 10% discount is retired, past sales receipts must retain their 10% savings line.
+- If a product is soft-deleted, historical bills must still display the original product name and brand name.
+
+This is achieved by decoupling the `bill_items` table from the live `products` row: `bill_items` snapshots `product_name`, `brand_name`, `unit_price_paise`, `discount_type`, `discount_value`, and `final_unit_price_paise` at the exact instant of checkout.
+
+---
+
+## 9. Backup and Restore Procedures
+
+Because SQLite operates in WAL mode, database backups must be taken without interfering with active writers:
 
 ```powershell
-# Using Python
-python -c "
-import sqlite3, shutil, datetime
-db_path = r'backend\data\supermarket.db'
-conn = sqlite3.connect(db_path)
-conn.execute('PRAGMA wal_checkpoint(TRUNCATE);')
-conn.close()
-ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-shutil.copy2(db_path, f'database_backups/backup_{ts}.db')
-print('Backup created successfully!')
-"
+# Clean backup using SQLite's online vacuum/backup command
+sqlite3 backend\data\supermarket.db ".backup 'backend\data\supermarket_backup.db'"
 ```
-
-### Restoration
-1. Stop the application server (`supermarket_server.exe`).
-2. Replace `backend/data/supermarket.db` with the backup copy.
-3. Remove any residual `backend/data/supermarket.db-wal` and `backend/data/supermarket.db-shm` files.
-4. Restart the application via `.\start-app.ps1`.
+Restoring simply requires stopping the backend process and copying the backup file over `supermarket.db`.

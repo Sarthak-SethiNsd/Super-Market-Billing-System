@@ -1,10 +1,10 @@
-# REST API Documentation: Supermarket Management System
+# REST API Documentation: Supermarket Management System (ApexMart)
 
-**Base URL:** `http://localhost:8080`
-**Transport:** HTTP/1.1
-**Content-Type:** `application/json`
-**Security Model:** Two-Mode Role Architecture:
-- **Public (Customer Mode):** Accessible without authentication.
+**Base URL:** `http://localhost:8080`  
+**Transport:** HTTP/1.1  
+**Content-Type:** `application/json`  
+**Security Model:** Two-Tier Role Architecture:
+- **Public (Customer Mode):** Accessible without authentication. Supports product discovery, real-time stock reservations, and atomic self-service checkout.
 - **Staff Mode (Protected):** Requires HTTP header: `Authorization: Bearer <sms_staff_token>`.
 
 ---
@@ -12,27 +12,33 @@
 ## 1. Authentication & Session Management
 
 ### 1.1 Staff Login (Mode Transition)
-Authenticates a staff member and provides a bearer token.
+Authenticates a staff member and provides a 64-character bearer token.
 
 - **Method / Route:** `POST /api/auth/staff/login` *(Alias: `POST /api/auth/admin/unlock`)*
 - **Access Level:** Public (Anyone with the staff password)
 - **Request Body:**
   ```json
   {
-    "password": "admin123"
+    "password": "Staff@123"
   }
   ```
 - **Success Response (`200 OK`):**
   ```json
   {
-    "token": "sms_staff_a1b2c3d4e5f6...",
-    "role": "STAFF",
-    "expiresIn": 86400
+    "success": true,
+    "message": "Staff privileges unlocked successfully",
+    "data": {
+      "unlocked": true,
+      "token": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "STAFF",
+      "expiresIn": 86400
+    }
   }
   ```
 - **Error Response (`401 Unauthorized`):**
   ```json
   {
+    "success": false,
     "error": "Invalid staff credentials"
   }
   ```
@@ -48,15 +54,24 @@ Inspects the caller's active session role.
 - **Response (Customer / Unauthenticated) (`200 OK`):**
   ```json
   {
-    "authenticated": false,
-    "role": "CUSTOMER"
+    "success": true,
+    "message": "Customer session",
+    "data": {
+      "authenticated": false,
+      "role": "CUSTOMER"
+    }
   }
   ```
 - **Response (Staff / Authenticated) (`200 OK`):**
   ```json
   {
-    "authenticated": true,
-    "role": "STAFF"
+    "success": true,
+    "message": "Session is active",
+    "data": {
+      "authenticated": true,
+      "role": "STAFF",
+      "expiresIn": 86400
+    }
   }
   ```
 
@@ -66,7 +81,7 @@ Inspects the caller's active session role.
 Invalidates the current staff session and reverts the caller to Customer Mode.
 
 - **Method / Route:** `POST /api/auth/logout`
-- **Access Level:** Public / Staff
+- **Access Level:** Staff
 - **Headers:** `Authorization: Bearer <token>`
 - **Success Response (`200 OK`):**
   ```json
@@ -89,268 +104,276 @@ System health check for container readiness and frontend connectivity.
   ```json
   {
     "status": "ok",
-    "service": "supermarket_server",
+    "service": "supermarket-management-backend",
     "version": "1.0.0"
   }
   ```
 
 ---
 
-## 3. Product Catalog Endpoints
+## 3. Multi-Session Cart Reservation Endpoints (`/api/cart/*`)
 
-### 3.1 List Products
-Fetches supermarket products with optional search and filters.
+The multi-session cart reservation subsystem prevents race conditions and stock conflicts across concurrent shoppers.
 
-- **Method / Route:** `GET /api/products`
-- **Access Level:** Public (Customer & Staff)
-- **Query Parameters:**
-  - `active_only`: `true` (default) or `false`
-  - `category_id`: Integer category filter
-  - `brand_id`: Integer brand filter
-  - `search`: String matching name or SKU
+- **Storage:** `product_reservations` SQLite table (Migration v6).
+- **Default TTL:** 900 seconds (15 minutes).
+- **Dynamic Formula:**
+  $$\text{availableStock} = \max(0, \text{totalStock} - \text{reservedStock})$$
+- **Automatic Clearance:** Reservations are automatically released atomically upon invoice creation (`POST /api/bills` with `sessionId`).
+
+### 3.1 Get Active Cart Reservations
+- **Method / Route:** `GET /api/cart`
+- **Access Level:** Public
+- **Query Parameters:** `sessionId` (or `X-Session-ID` header)
 - **Success Response (`200 OK`):**
   ```json
-  [
-    {
-      "id": 1,
-      "sku": "AASH-ATT-001",
-      "name": "Aashirvaad Superior MP Sharbati Atta 5kg",
-      "brandId": 1,
-      "brandName": "Aashirvaad",
-      "categoryId": 1,
-      "categoryName": "Grains & Staples",
-      "productType": "NON_PERISHABLE",
-      "priceInPaise": 34900,
-      "priceFormatted": "₹349.00",
-      "stock": 45,
-      "expiryDate": null,
-      "discountType": "PERCENTAGE",
-      "discountValue": 5.0,
-      "isActive": true
+  {
+    "success": true,
+    "message": "Active cart reservations retrieved",
+    "data": {
+      "sessionId": "sess_8f3a91bc_m1c3",
+      "totalReservedUnits": 2,
+      "itemCount": 1,
+      "items": [
+        {
+          "id": 1,
+          "sessionId": "sess_8f3a91bc_m1c3",
+          "productId": 4,
+          "productName": "Tata Tea Gold 500g",
+          "sku": "SKU-BEV-001",
+          "quantity": 2,
+          "expiresAt": 1731908400,
+          "remainingSeconds": 875
+        }
+      ]
     }
-  ]
+  }
   ```
 
----
-
-### 3.2 Get Product by ID
-Retrieves details for a single product.
-
-- **Method / Route:** `GET /api/products/<int:id>`
-- **Access Level:** Public (Customer & Staff)
-- **Success Response (`200 OK`):** Single product JSON object.
-- **Error Response (`404 Not Found`):** `{"error": "Product not found"}`
-
----
-
-### 3.3 Create Product
-Registers a new product in the store catalog.
-
-- **Method / Route:** `POST /api/products`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
+### 3.2 Reserve Cart Stock
+- **Method / Route:** `POST /api/cart/reserve`
+- **Access Level:** Public
 - **Request Body:**
   ```json
   {
-    "sku": "TAT-TEA-002",
-    "name": "Tata Tea Premium 500g",
-    "brandId": 2,
-    "categoryId": 4,
-    "productType": "NON_PERISHABLE",
-    "priceInPaise": 28000,
-    "stock": 60,
-    "discountType": "NONE",
-    "discountValue": 0.0
-  }
-  ```
-- **Success Response (`201 Created`):** `{"id": 26, "sku": "TAT-TEA-002", ...}`
-- **Error Response (`401 Unauthorized`):** `{"error": "Staff authentication required"}`
-
----
-
-### 3.4 Update Product
-Modifies an existing product's metadata, pricing, or discount.
-
-- **Method / Route:** `PUT /api/products/<int:id>`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response (`200 OK`):** Updated product JSON object.
-
----
-
-### 3.5 Deactivate Product (Soft Delete)
-Sets `is_active = 0` to prevent future purchases while preserving historical invoice links.
-
-- **Method / Route:** `DELETE /api/products/<int:id>`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response (`200 OK`):** `{"success": true, "message": "Product deactivated"}`
-
----
-
-## 4. Point-of-Sale & Billing Endpoints
-
-### 4.1 Execute Checkout (Create Bill)
-Executes an atomic checkout. Validates stock, calculates integer paise discounts, writes historical invoice snapshots, decrements inventory, and logs audit movements.
-
-- **Method / Route:** `POST /api/bills`
-- **Access Level:** Public (Customer Self-Service & Staff POS)
-- **Request Body:**
-  ```json
-  {
-    "customerName": "Rohan Sharma",
-    "customerPhone": "9876543210",
-    "items": [
-      {
-        "productId": 1,
-        "quantity": 2
-      },
-      {
-        "productId": 5,
-        "quantity": 1
-      }
-    ]
-  }
-  ```
-- **Success Response (`201 Created`):**
-  ```json
-  {
-    "id": 14,
-    "billNumber": "BILL-20261118-0014",
-    "customerName": "Rohan Sharma",
-    "customerPhone": "9876543210",
-    "subtotalPaise": 74800,
-    "subtotalFormatted": "₹748.00",
-    "totalDiscountPaise": 3490,
-    "totalDiscountFormatted": "₹34.90",
-    "finalAmountPaise": 71310,
-    "finalAmountFormatted": "₹713.10",
-    "createdAt": "2026-11-18 02:00:00",
-    "items": [
-      {
-        "productId": 1,
-        "productName": "Aashirvaad Superior MP Sharbati Atta 5kg",
-        "brandName": "Aashirvaad",
-        "unitPricePaise": 34900,
-        "discountType": "PERCENTAGE",
-        "discountValue": 5.0,
-        "unitDiscountPaise": 1745,
-        "finalUnitPricePaise": 33155,
-        "quantity": 2,
-        "lineTotalPaise": 66310
-      }
-    ]
-  }
-  ```
-- **Error Response (`400 Bad Request`):**
-  ```json
-  {
-    "error": "Insufficient stock for product: Fresh Organic Baby Spinach (requested 4, available 3)"
-  }
-  ```
-
----
-
-### 4.2 Get Bill by ID (View Receipt)
-Retrieves the immutable invoice snapshot for printing or customer review.
-
-- **Method / Route:** `GET /api/bills/<int:id>`
-- **Access Level:** Public (Customer & Staff)
-- **Success Response (`200 OK`):** Complete bill object matching the schema above.
-
----
-
-### 4.3 Get Bill Ledger
-Retrieves historical sales invoices.
-
-- **Method / Route:** `GET /api/bills`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Query Parameters:** `limit` (default 50), `offset` (default 0)
-- **Success Response (`200 OK`):** Array of historical bills.
-- **Error Response (`401 Unauthorized`):** `{"error": "Staff authentication required"}`
-
----
-
-### 4.4 Get Sales Analytics Summary
-Aggregates sales metrics for the operational dashboard.
-
-- **Method / Route:** `GET /api/bills/summary`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response (`200 OK`):**
-  ```json
-  {
-    "todaySalesPaise": 1425000,
-    "todaySalesFormatted": "₹14,250.00",
-    "todayBillsCount": 28,
-    "totalProducts": 25,
-    "lowStockCount": 1,
-    "outOfStockCount": 0,
-    "topSellingProducts": [
-      {"name": "Amul Butter 500g", "unitsSold": 34, "revenuePaise": 952000}
-    ]
-  }
-  ```
-
----
-
-## 5. Inventory & Stock Endpoints
-
-### 5.1 Low Stock Alerts
-Lists all items where `stock <= 5`.
-
-- **Method / Route:** `GET /api/inventory/low-stock`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response (`200 OK`):** Array of low stock products.
-
----
-
-### 5.2 Stock Intake & Audit Adjustment
-Records manual stock changes with an audit justification.
-
-- **Method / Route:** `POST /api/inventory/adjust`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Request Body:**
-  ```json
-  {
-    "productId": 1,
-    "movementType": "ADDITION",
-    "quantityChange": 20,
-    "reason": "Supplier shipment received (PO-8821)"
+    "sessionId": "sess_8f3a91bc_m1c3",
+    "productId": 4,
+    "quantity": 2,
+    "ttlSeconds": 900
   }
   ```
 - **Success Response (`200 OK`):**
   ```json
   {
     "success": true,
-    "previousStock": 45,
-    "newStock": 65
+    "message": "Stock reservation updated successfully",
+    "data": {
+      "sessionId": "sess_8f3a91bc_m1c3",
+      "productId": 4,
+      "productName": "Tata Tea Gold 500g",
+      "quantity": 2,
+      "totalStock": 45,
+      "reservedStock": 2,
+      "availableStock": 43,
+      "ttlSeconds": 900
+    }
+  }
+  ```
+- **Error Responses:**
+  - `400 Bad Request`: `InvalidQuantityException` if `quantity <= 0`.
+  - `409 Conflict`: `InsufficientStockException` if requested reservation exceeds available stock.
+
+### 3.3 Release Single Item Reservation
+- **Method / Route:** `POST /api/cart/release`
+- **Access Level:** Public
+- **Request Body:**
+  ```json
+  {
+    "sessionId": "sess_8f3a91bc_m1c3",
+    "productId": 4
+  }
+  ```
+- **Success Response (`200 OK`):**
+  ```json
+  {
+    "success": true,
+    "message": "Reservation released successfully",
+    "data": {
+      "sessionId": "sess_8f3a91bc_m1c3",
+      "productId": 4,
+      "released": true
+    }
+  }
+  ```
+
+### 3.4 Clear Session Cart
+- **Method / Route:** `POST /api/cart/clear`
+- **Access Level:** Public
+- **Request Body:**
+  ```json
+  {
+    "sessionId": "sess_8f3a91bc_m1c3"
+  }
+  ```
+- **Success Response (`200 OK`):**
+  ```json
+  {
+    "success": true,
+    "message": "Cart reservations cleared successfully",
+    "data": {
+      "sessionId": "sess_8f3a91bc_m1c3",
+      "clearedReservations": 1
+    }
   }
   ```
 
 ---
 
-### 5.3 Inventory Movement Log
-Retrieves the immutable audit trail of all historical inventory shifts.
+## 4. Product Catalog & Batch Endpoints (`/api/products/*`)
 
-- **Method / Route:** `GET /api/inventory/movements`
-- **Access Level:** **STAFF ONLY** (`requireStaff`)
-- **Headers:** `Authorization: Bearer <token>`
-- **Success Response (`200 OK`):** Array of movement log records.
+### 4.1 Get Product Catalog
+- **Method / Route:** `GET /api/products`
+- **Access Level:** Public
+- **Query Parameters:** `q`, `brandId`, `categoryId`, `productType`, `minPrice`, `maxPrice`, `inStockOnly`, `limit`, `offset`
+- **Success Response (`200 OK`):** Paginated array of products with calculated available stock and reserved quantities.
+
+### 4.2 Get Product Details
+- **Method / Route:** `GET /api/products/<int:id>`
+- **Access Level:** Public
+- **Success Response (`200 OK`):** Single product JSON record.
+
+### 4.3 Add Product or Duplicate Restock
+- **Method / Route:** `POST /api/products`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+- **Behavior:** If SKU and normalized name/category match an existing product, it restocks the item automatically and logs an `ADDITION` movement.
+- **Request Body:**
+  ```json
+  {
+    "sku": "SKU-BEV-001",
+    "name": "Tata Tea Gold 500g",
+    "brandId": 3,
+    "categoryId": 4,
+    "productType": "NON_PERISHABLE",
+    "priceInPaise": 36000,
+    "stock": 25,
+    "discount": {
+      "type": "FIXED",
+      "value": 50.0
+    }
+  }
+  ```
+- **Success Response (`200 OK` - Restocked):**
+  ```json
+  {
+    "success": true,
+    "message": "Existing item detected. Stock successfully increased by 25 units.",
+    "data": { "id": 4, "currentStock": 70 }
+  }
+  ```
+
+### 4.4 Update Product & Audit Price/Discount
+- **Method / Route:** `PUT /api/products/<int:id>`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+- **Behavior:** Updates product attributes. Any modification to price or discount strategy automatically generates an immutable audit entry in `price_history`.
+
+### 4.5 Product Batches (FEFO Tracking)
+- **Method / Route:** `GET /api/products/<int:id>/batches` (List FEFO batches)
+- **Method / Route:** `POST /api/products/<int:id>/batches` (Add new batch with expiry date)
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
 
 ---
 
-## 6. Category & Brand Taxonomy Endpoints
+## 5. Billing & Purchase Approval Endpoints (`/api/bills/*`)
+
+### 5.1 Purchase Approval & Checkout Execution
+- **Method / Route:** `POST /api/bills`
+- **Access Level:** Public / Staff
+- **Architecture:** Atomic purchase approval model. Does not require external gateway or admin confirmation.
+- **Request Body:**
+  ```json
+  {
+    "sessionId": "sess_8f3a91bc_m1c3",
+    "customerName": "Rahul Verma",
+    "customerPhone": "9876543210",
+    "items": [
+      { "productId": 1, "quantity": 2 },
+      { "productId": 4, "quantity": 1 }
+    ]
+  }
+  ```
+- **Success Response (`201 Created`):**
+  ```json
+  {
+    "success": true,
+    "message": "Invoice created successfully",
+    "data": {
+      "id": 16,
+      "billNumber": "INV-20261118023045-812-001",
+      "customerName": "Rahul Verma",
+      "customerPhone": "9876543210",
+      "subtotalPaise": 95000,
+      "subtotalInRupees": 950.0,
+      "totalDiscountPaise": 5000,
+      "totalDiscountInRupees": 50.0,
+      "finalAmountPaise": 90000,
+      "finalAmountInRupees": 900.0,
+      "createdAt": "2026-11-18 02:30:45",
+      "itemCount": 2,
+      "items": [ ... ]
+    }
+  }
+  ```
+- **Error Responses:**
+  - `400 Bad Request`: `InvalidQuantityException` if `quantity <= 0`.
+  - `400 Bad Request`: `InsufficientStockException` if requested quantity exceeds inventory.
+
+### 5.2 Get Invoice Receipt Snapshot
+- **Method / Route:** `GET /api/bills/<int:id>`
+- **Access Level:** Public / Staff
+- **Success Response (`200 OK`):** Complete immutable invoice snapshot.
+
+### 5.3 Get Sales Analytics Summary
+- **Method / Route:** `GET /api/bills/summary`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+- **Success Response (`200 OK`):** Aggregate net revenue, gross revenue, discounts, and total units sold.
+
+---
+
+## 6. Inventory & Stock Management (`/api/inventory/*`)
+
+### 6.1 Inventory Summary Metrics
+- **Method / Route:** `GET /api/inventory/summary`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+
+### 6.2 Immutable Stock Movement Audit Ledger
+- **Method / Route:** `GET /api/inventory/movements`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+
+### 6.3 Manual Stock Adjustments
+- **Method / Route:** `POST /api/inventory/adjustments`
+- **Access Level:** Staff (`Authorization: Bearer <token>`)
+- **Request Body:**
+  ```json
+  {
+    "productId": 1,
+    "movementType": "ADDITION",
+    "quantityChange": 20,
+    "reason": "Supplier shipment intake Batch #B2026-11"
+  }
+  ```
+
+---
+
+## 7. Category, Brand, and Customer Endpoints
 
 | Endpoint | Method | Access Level | Description |
 | :--- | :---: | :---: | :--- |
-| `/api/categories` | `GET` | Public | List all store categories |
-| `/api/categories` | `POST` | **Staff** | Create a new retail category |
+| `/api/categories` | `GET` | Public | List categories with product counts |
+| `/api/categories` | `POST` | Staff | Create new category |
 | `/api/categories/<id>/brands` | `GET` | Public | List authorized brands for category |
-| `/api/categories/<id>/brands` | `POST` | **Staff** | Associate brand to category |
-| `/api/categories/<id>/brands/<bid>` | `DELETE` | **Staff** | Disassociate brand from category |
-| `/api/brands` | `GET` | Public | List all retail brands |
-| `/api/brands` | `POST` | **Staff** | Create a new brand record |
+| `/api/categories/<id>/brands` | `POST` | Staff | Associate brand to category |
+| `/api/brands` | `GET` | Public | List manufacturer brands |
+| `/api/brands` | `POST` | Staff | Register new brand |
+| `/api/customers` | `GET` | Staff | List registered customers |
+| `/api/customers` | `POST` | Staff | Register customer profile |
+| `/api/customers/<id>` | `GET` | Staff | View customer profile and lifetime spend |

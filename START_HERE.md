@@ -33,7 +33,7 @@ Open **PowerShell** inside `Supermarket_Management_System/` (or `Supermarket_Sub
 This script:
 1. Detects CMake, MSVC (`cl.exe`), Node.js, and npm.
 2. Compiles the C++ backend in Release mode.
-3. Executes all **5 CTest test suites** (34/34 passing test cases).
+3. Executes all **5 CTest test suites** (39/39 passing test cases).
 4. Installs frontend dependencies and verifies the TypeScript production build (`tsc -b && vite build`).
 
 ---
@@ -43,7 +43,7 @@ This script:
 The application uses the canonical database location:
 $$\mathbf{backend/data/supermarket.db}$$
 
-The database already comes pre-seeded with **25 representative Indian retail products** across **7 categories** and a demonstration staff account (password: `admin123`).
+The database already comes pre-seeded with **25 representative Indian retail products** across **7 categories** and a demonstration staff account (password: `Staff@123` or `admin123`).
 
 If you ever wish to re-seed or verify the database, run:
 ```powershell
@@ -90,7 +90,7 @@ From `Supermarket_Management_System/` in PowerShell:
    - Review the stock movement history table. Verify that the recent sale is recorded as an immutable `SALE` movement with negative quantity.
 5. **Authenticate Staff Mode:**
    - In the top header or sidebar, click **Staff Login**.
-   - Enter password: `admin123`.
+   - Enter password: `Staff@123` (fallback: `admin123`).
    - The UI activates Staff Mode (purple badge), unlocking full operational dashboard analytics, product creation/editing, brand/category management, and manual stock adjustments.
 6. **OOP Concepts Explorer (`/oop-concepts`):**
    - Visit the interactive educational portal to explore class hierarchy diagrams, dynamic polymorphism simulations, object slicing demos, and code excerpts mapped directly to C++ source files.

@@ -26,13 +26,13 @@ All technical documentation files are authored, verified against the actual code
 | **Submission Checklist** | `PROJECT_SUBMISSION_CHECKLIST.md` | Complete | This verification document. |
 | **Formal Project Report** | `docs/PROJECT_REPORT.md` | Complete | Academic report with abstract, requirements, architecture, results, and limitations. |
 | **System Architecture** | `docs/SYSTEM_ARCHITECTURE.md` | Complete | Multi-tier topology, Mermaid sequence diagrams, and concurrency design. |
-| **Database Design** | `docs/DATABASE_DESIGN.md` | Complete | 10 SQLite table schemas, ER diagram, migrations, transactions, and snapshots. |
-| **REST API Documentation** | `docs/API_DOCUMENTATION.md` | Complete | Crow REST endpoints, request/response DTOs, and role-based access. |
-| **OOP Concepts Guide** | `docs/OOP_CONCEPTS.md` | Complete | Detailed C++17 OOP concepts (vtable, RAII, strategy pattern, templates, diamond problem). |
+| **Database Design** | `docs/DATABASE_DESIGN.md` | Complete | 11 SQLite table schemas, ER diagram, migrations (v1-v6), transactions, batches & cart holds. |
+| **REST API Documentation** | `docs/API_DOCUMENTATION.md` | Complete | Crow REST endpoints, request/response DTOs, cart reservations, and role-based access. |
+| **OOP Concepts Guide** | `docs/OOP_CONCEPTS.md` | Complete | Detailed C++17 OOP concepts (vtable, RAII, strategy pattern, templates, polymorphic exceptions). |
 | **User Manual** | `docs/USER_MANUAL.md` | Complete | Step-by-step user manual for Customer Mode shopping and Staff Mode management. |
 | **Installation & Deployment** | `docs/INSTALLATION_AND_DEPLOYMENT.md` | Complete | Local setup, CTest verification, Docker containerization, and Render deployment. |
-| **Testing Report** | `docs/TESTING_REPORT.md` | Complete | 34 CTest test cases across 5 suites, test coverage, and build verification. |
-| **Viva Defense Guide** | `docs/VIVA_PREPARATION.md` | Complete | 40 source-mapped viva questions, 10 architectural decisions defended, and elevator pitch. |
+| **Testing Report** | `docs/TESTING_REPORT.md` | Complete | 39 CTest test cases across 5 suites, test coverage, and build verification. |
+| **Viva Defense Guide** | `docs/VIVA_PREPARATION.md` | Complete | 46 source-mapped viva questions, 10 architectural decisions defended, and elevator pitch. |
 | **Project Overview** | `docs/PROJECT_OVERVIEW.md` | Complete | Retail problem statement, project scope, and user roles. |
 | **Features & Modules** | `docs/FEATURES_AND_MODULES.md` | Complete | Specifications for Public Site, POS, Catalog, Inventory, and Analytics. |
 | **Demo Guide** | `docs/DEMO_GUIDE.md` | Complete | Step-by-step evaluation script for live demonstration. |
@@ -55,12 +55,12 @@ Run from `Supermarket_Management_System/`:
   - `supermarket_domain.lib` (Core business logic and repositories)
   - `supermarket_server.exe` (Crow HTTP REST daemon)
   - `supermarket_seeder.exe` (Standalone C++ demo seeder)
-- [x] **CTest Automated Test Suites (34/34 Passing):**
-  - [x] `DiscountSuite` — 5 / 5 PASSED
-  - [x] `InventorySuite` — 5 / 5 PASSED
+- [x] **CTest Automated Test Suites (39/39 Passing):**
+  - [x] `DiscountSuite` — 6 / 6 PASSED
+  - [x] `InventorySuite` — 6 / 6 PASSED
   - [x] `BillingSuite` — 6 / 6 PASSED
-  - [x] `DatabaseSuite` — 6 / 6 PASSED
-  - [x] `ApiSuite` — 12 / 12 PASSED
+  - [x] `DatabaseSuite` — 8 / 8 PASSED
+  - [x] `ApiSuite` — 13 / 13 PASSED
 - [x] **Frontend Production Build:** `tsc -b && vite build` succeeds cleanly with 0 errors and outputs `frontend/dist/`.
 
 ---
@@ -72,10 +72,10 @@ Run from `Supermarket_Management_System/`:
   - 25 representative Indian supermarket products.
   - 7 core retail categories.
   - 19 brand manufacturers.
-  - Perishable products with ISO future expiry dates.
+  - Perishable products with ISO future expiry dates and FEFO batches.
   - Low-stock alert demonstration item (`Fresh Organic Baby Spinach Palak 250g`, stock = 3 $\le 5$).
 - [x] **Seeder Idempotency:** Both `supermarket_seeder.exe` and `python scripts/seed_demo_data.py` safely detect existing records on repeated runs (0 inserted, 25 skipped).
-- [x] **Pre-Seeded Staff Account:** `admin123` available for evaluation.
+- [x] **Pre-Seeded Staff Account:** `Staff@123` (fallback: `admin123`) available for evaluation.
 
 ---
 

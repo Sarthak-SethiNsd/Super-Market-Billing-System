@@ -35,7 +35,7 @@
 > - **Operator Overloading** simplifies shopping cart aggregation with `operator+=` and stream receipt formatting with `operator<<`.
 > - Financial calculations strictly use **64-bit integer paise**, completely eliminating floating-point drift.
 >
-> All 34 automated CTest test cases across 5 test suites pass at 100%, and the frontend builds cleanly with zero TypeScript errors. The original academic console file at `Supermarket_billing_System/1.cpp` remains untouched as our baseline."*
+> All 39 automated CTest test cases across 5 test suites pass at 100%, and the frontend builds cleanly with zero TypeScript errors. The original academic console file at `Supermarket_billing_System/1.cpp` remains untouched as our baseline."*
 
 ---
 
@@ -195,7 +195,35 @@
 **Answer:** Session storage isolates the token to the active browser tab session. Closing the browser window automatically revokes management access on the client side, preventing unauthorized access on shared supermarket terminal computers.
 
 ### Q39: Why did you include automated CTest suites in an academic OOP project?
-**Answer:** Manual testing is subjective and error-prone. Automated CTest suites provide mathematical proof of system correctness, executing 34 unit and integration assertions across discount bounds, stock underflow prevention, and REST API access controls in under 4 seconds.
+**Answer:** Manual testing is subjective and error-prone. Automated CTest suites provide mathematical proof of system correctness, executing 39 unit and integration assertions across discount bounds, stock underflow prevention, domain exception handling, and REST API access controls in under 4 seconds.
 
 ### Q40: Why is integer division postponed until UI formatting?
 **Answer:** Performing division early (e.g., calculating unit prices as rupees with decimals) introduces fractional remainders that accumulate over multi-item multiplications. Keeping all arithmetic in integer paise until the final display string generation ensures exact integer mathematical precision throughout the entire calculation pipeline.
+
+---
+
+## 8. Section 7: Recent Advanced Architecture & Feature Defenses
+
+### Q41: How is the Polymorphic C++ Domain Exception Hierarchy designed and how does it map to core OOP concepts?
+**Answer:** In `backend/include/utils/Exceptions.hpp`, we defined a custom exception taxonomy:
+- **Abstraction:** Pure virtual base interface `ISupermarketException` declaring `virtual const char* what() const noexcept = 0;` and a virtual destructor.
+- **Multiple Inheritance:** Concrete exceptions inherit from standard library exception classes (`std::invalid_argument` for input/contract failures, `std::runtime_error` for runtime/stock failures) AND `ISupermarketException`.
+- **Polymorphism:** Catch blocks in API controllers can catch by `const ISupermarketException&`, invoking dynamic dispatch on `what()` across `InvalidQuantityException`, `InsufficientStockException`, and `InvalidDiscountException`.
+- **Encapsulation:** `InsufficientStockException` privately encapsulates `requested`, `available`, and `productName`, exposing them via public const getters (`.getRequested()`, `.getAvailable()`, `.getProductName()`).
+
+### Q42: What is the Multi-Session Reserved Stock System and how does it prevent race conditions between concurrent shoppers?
+**Answer:** In multi-user retail environments, multiple customers might simultaneously place the last 2 units of an item into their carts. We introduced the `product_reservations` SQLite table (Migration v6) with a 15-minute TTL. Adding an item to a cart creates a reservation hold. Available stock is dynamically computed as:
+$$\text{availableStock} = \max\bigl(0,\, \text{totalStock} - \text{reservedStock}\bigr)$$
+If a customer attempts to reserve more units than available, the server returns HTTP 409 Conflict. When checkout executes (`POST /api/bills`), reservations for that session are automatically and atomically cleared within the checkout database transaction.
+
+### Q43: Why does your POS checkout operate as an Atomic Purchase Approval model instead of integrating an external payment gateway or admin approval queue?
+**Answer:** In commercial physical supermarkets and high-volume POS systems, cashiers and self-checkout kiosks cannot stall waiting for external banking webhooks, third-party network gateways, or manual manager approval queues. The POS purchase operates on an atomic purchase approval model: once confirmed, the system immediately validates live stock, inserts immutable bill snapshots, updates inventory via FEFO, records movement logs, and commits the transaction in an atomic ACID SQLite transaction.
+
+### Q44: How does Multi-Batch Tracking with FEFO (First-Expired, First-Out) stock deduction work for perishable goods?
+**Answer:** Table `product_batches` (Migration v5) tracks individual supplier shipment batches with their respective expiry dates. During sales checkouts, `ProductBatchRepository::deductStockFEFO()` executes a two-pass algorithm: it depletes units from the earliest-expiring unexpired batches first (`ORDER BY expiry_date ASC`). It then automatically updates the parent `products.expiry_date` column to reflect the nearest active batch's expiration date.
+
+### Q45: How does Intelligent Duplicate Item Restock Logic work when adding items with the same barcode/SKU?
+**Answer:** When staff creates a product via `POST /api/products`, the backend checks if an active product already exists with that SKU. If the normalized name and category match, rather than rejecting the barcode or creating duplicate catalog rows, it automatically performs a **Restock**: increments existing shelf stock, adds a new batch if perishable, logs an `ADDITION` movement, and returns HTTP 200 with message `"Existing item detected. Stock successfully increased by X units."`
+
+### Q46: How does the Daily Price & Discount History Auditing system (`price_history`) work?
+**Answer:** Table `price_history` (Migration v5) records an immutable audit log whenever staff edits a product's price or promotional discount via `PUT /api/products/:id`. It captures `old_price_paise`, `new_price_paise`, `old_discount_type`, `new_discount_type`, `old_discount_value`, `new_discount_value`, manager notes, and a timestamp. This guarantees full regulatory compliance and price auditability.

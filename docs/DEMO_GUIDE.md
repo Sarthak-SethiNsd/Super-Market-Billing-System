@@ -72,21 +72,24 @@ Before beginning the evaluation walkthrough:
 ## 5. Step 4: POS Billing Terminal & Live Checkout
 
 1. In the sidebar, click **Billing** (`/billing`).
-2. **Test Real-Time Search:**
+2. **Test Dynamic Department Filtering:**
+   - Click the category filter pills (e.g. "All Categories", "Dairy & Chilled", "Grains & Staples") to inspect instant department filtering.
+3. **Test Real-Time Search & Cart Stock Hold:**
    - In the search bar, type `Atta` or `SKU-GRAIN-001`. Observe the immediate client-side filtering.
-   - Click the product card to add **Aashirvaad Atta** to the cart.
-3. **Test Discount Handling:**
+   - Click the product card to add **Aashirvaad Atta** to the cart. Observe that adding an item places a temporary 15-minute hold in `product_reservations`, and the catalog dynamically updates available stock ($\text{available} = \text{total} - \text{reserved}$).
+4. **Test Discount Handling:**
    - Search for `Rice` (`India Gate Basmati Rice Classic 5kg`). Notice the **10% OFF** discount badge.
    - Add to cart. Notice that the cart displays:
      - Unit Price: `₹625.00`
      - Applied Discount: `10.0% off` (`- ₹62.50/unit`)
      - Net Unit Price: `₹562.50`
-4. **Test Quantity Adjustments & Stock Guards:**
+5. **Test Quantity Adjustments & Stock Guards:**
    - Increase Atta quantity to `2`.
    - Notice the reactive calculation updates subtotal, discount, and total.
-5. **Execute Sale:**
+6. **Enter Customer Details & Atomic Purchase Approval:**
+   - Enter Customer Name (e.g., `Rahul Verma`) and optional phone number.
    - Click the green **Complete Sale & Print** button.
-   - An atomic `POST /api/bills` request executes.
+   - An atomic `POST /api/bills` request executes: stock is deducted via FEFO, immutable bill snapshots are captured, cart holds are released, and the transaction commits in an atomic SQLite transaction (no external gateway or manual approval delay).
 
 ---
 
@@ -94,7 +97,8 @@ Before beginning the evaluation walkthrough:
 
 1. Immediately upon checkout completion, an **Invoice Receipt Modal** surfaces.
 2. Verify the printed attributes:
-   - Unique Invoice Number: `INV-YYYYMMDDHHMMSS-XXX-XXX`.
+   - Unique Invoice Number: `INV-YYYYMMDDHHMMSS-mmm-seq`.
+   - Customer Name: `Rahul Verma`.
    - Immutable line items, unit prices, discounts, and line totals.
    - Gross Subtotal, Total Discounts, and Net Amount Paid.
 3. Click the **Print Receipt** button:
@@ -118,13 +122,13 @@ Before beginning the evaluation walkthrough:
 
 ## 8. Step 7: Administrative Authentication & Privileged Actions
 
-1. In the top-right corner of the header, notice the status indicates **Staff Mode**.
-2. Click **Unlock Admin**.
-3. In the modal, enter the demonstration administrator password:
-   $$\mathbf{admin123}$$
-4. Click **Unlock Admin Privileges**:
-   - Status badge turns golden-amber: **Admin Mode**.
-   - Admin management options become active.
+1. In the top-right corner of the header, notice the status indicates **Customer Mode** (or click **Staff Login**).
+2. Click **Staff Login** (or **Unlock Admin**).
+3. In the modal, enter the demonstration staff password:
+   $$\mathbf{Staff@123}\quad\text{(or }\mathbf{admin123}\text{)}$$
+4. Click **Authenticate**:
+   - Status badge turns purple: **Staff Mode**.
+   - Privileged management options become active across `/dashboard`, `/inventory`, `/products`, `/transactions`, and `/admin`.
 5. Navigate to **Admin** (`/admin`):
    - Add a test Brand (e.g., `Organic India`). Verify instant addition.
 6. Navigate to **Inventory** (`/inventory`):

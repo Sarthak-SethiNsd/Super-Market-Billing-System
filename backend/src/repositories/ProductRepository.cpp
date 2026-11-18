@@ -215,27 +215,29 @@ std::vector<std::shared_ptr<Product>> ProductRepository::search(const std::strin
                                                               std::optional<int> brandId,
                                                               std::optional<int> categoryId) {
     std::string sql = R"(
-        SELECT id, sku, name, brand_id, category_id, product_type, price_in_paise,
-               stock, expiry_date, discount_type, discount_value, is_active
-        FROM products
-        WHERE is_active = 1
+        SELECT p.id, p.sku, p.name, p.brand_id, p.category_id, p.product_type, p.price_in_paise,
+               p.stock, p.expiry_date, p.discount_type, p.discount_value, p.is_active
+        FROM products p
+        LEFT JOIN brands b ON p.brand_id = b.id
+        WHERE p.is_active = 1
     )";
 
     if (!query.empty()) {
-        sql += " AND (name LIKE ? OR sku LIKE ?) ";
+        sql += " AND (p.name LIKE ? OR p.sku LIKE ? OR b.name LIKE ?) ";
     }
     if (brandId.has_value()) {
-        sql += " AND brand_id = ? ";
+        sql += " AND p.brand_id = ? ";
     }
     if (categoryId.has_value()) {
-        sql += " AND category_id = ? ";
+        sql += " AND p.category_id = ? ";
     }
-    sql += " ORDER BY name ASC;";
+    sql += " ORDER BY p.name ASC;";
 
     PreparedStatement stmt(db, sql);
     int bindIndex = 1;
     if (!query.empty()) {
         std::string pattern = "%" + query + "%";
+        stmt.bind(bindIndex++, pattern);
         stmt.bind(bindIndex++, pattern);
         stmt.bind(bindIndex++, pattern);
     }

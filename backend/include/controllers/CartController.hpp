@@ -99,8 +99,8 @@ public:
                         return ControllerUtils::errorResponse(400, "Field 'quantity' is required and must be an integer", allowedOrigin);
                     }
                     int quantity = body["quantity"].get<int>();
-                    if (quantity < 0) {
-                        return ControllerUtils::errorResponse(400, "Field 'quantity' cannot be negative", allowedOrigin);
+                    if (quantity <= 0) {
+                        return ControllerUtils::errorResponse(400, "Invalid quantity: must be positive", allowedOrigin);
                     }
 
                     int ttlSeconds = 900; // 15 minutes default

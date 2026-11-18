@@ -26,14 +26,18 @@ The application features a clean architectural separation between:
 ## 2. Problem Statement & Motivation
 
 Traditional retail operations and academic introductory systems frequently encounter severe operational vulnerabilities:
-- **Concurrency & Stock Overselling:** Billing systems without atomic database transactions risk selling products beyond physical warehouse availability.
+- **Concurrency & Stock Overselling:** Billing systems without stock reservation or atomic transactions risk overselling scarce products to simultaneous shoppers.
 - **Floating-Point Currency Drift:** Storing currency amounts using IEEE 754 floating-point numbers (`float`/`double`) introduces catastrophic rounding errors during tax and discount summations.
 - **Historical Record Mutability:** If a product's price or description changes, poorly designed billing systems retroactively alter historical receipts.
+- **Payment & Approval Bottlenecks:** Systems relying on third-party payment gateways, QR code webhooks, or manual manager approval queues suffer from checkout latency and failure points.
 - **Security Vulnerabilities:** Plaintext credential storage, unauthenticated admin endpoints, and SQL injection flaws.
 
 This system addresses each vulnerability through rigorous software architecture:
 - **Integer Paise Representation:** All monetary values are strictly represented and calculated as 64-bit signed integers (`int64_t`) in smallest currency units (paise: ₹1.00 = 100 paise).
-- **Atomic Database Transactions:** Multi-item checkouts and stock deductions execute within ACID-compliant SQLite transactions (`Transaction` RAII class) that guarantee all-or-nothing execution.
+- **Multi-Session Reserved Stock System:** 15-minute TTL cart holds (`product_reservations`) isolate stock across concurrent shoppers, calculating available stock dynamically ($\text{available} = \max(0, \text{total} - \text{reserved})$).
+- **Atomic Purchase Approval Model:** POS and customer checkouts execute directly as an atomic purchase approval model inside ACID-compliant SQLite transactions (`Transaction` RAII class) that guarantee all-or-nothing execution without third-party network latency.
+- **Multi-Batch FEFO Stock Deduction:** Automatically deducts from earliest-expiring unexpired batches first for perishable inventory.
+- **Polymorphic Domain Exception Hierarchy:** Custom exceptions in `Exceptions.hpp` map cleanly to standard library hierarchies and translate to deterministic HTTP 400/409 codes.
 - **Immutable Invoice Snapshots:** Line items in completed transactions capture a frozen copy of product name, brand, original unit price, discount strategy, and line total at the exact moment of sale.
 - **Cryptographic Security:** Passwords are hashed using PBKDF2-HMAC-SHA256 with 100,000 iterations and 128-bit cryptographically secure random salts.
 
@@ -97,23 +101,26 @@ This system addresses each vulnerability through rigorous software architecture:
 
 ## 6. User Roles and Workflows
 
-### Role Definitions
+### Role Definitions (Strict Two-Mode Operating Architecture)
 
-1. **Public Customer:**
-   - Visits `/` to view store hours, department offerings, and company information.
-   - Cannot view internal sales metrics, transaction records, or stock adjustment tools.
+1. **Public Customer Mode:**
+   - Visits `/` for corporate store showcase, department highlights, and verified amenities.
+   - Browses catalog with dynamic category filters ("All Categories" + dynamic departments).
+   - Places temporary 15-minute stock holds via the Multi-Session Reserved Stock System (`/api/cart`).
+   - Executes atomic self-service checkout (`POST /api/bills`) with customer name & phone entry.
+   - Generates instant 80mm thermal receipts.
+   - **Restricted:** Zero access to internal revenue metrics, stock adjustment tools, product CRUD, or staff credential management.
 
-2. **Cashier / Staff Member (Default Internal Mode):**
-   - Accesses internal application via `/staff` or direct navigation.
-   - Can search products, build cart items, apply discounts, and complete sales checkouts.
-   - Can inspect historical receipts and view real-time inventory counts.
-   - **Restricted:** Cannot create or edit products, delete categories, modify master prices, or perform arbitrary stock adjustments.
-
-3. **Administrator:**
-   - Unlocks administrative privileges by clicking **Unlock Admin** and providing the master password.
-   - Receives an in-memory bearer token stored in client memory.
-   - Can create, update, and deactivate products, brands, and categories.
-   - Can execute arbitrary inventory adjustments with mandatory reason codes.
+2. **Staff Mode (Password-Authenticated):**
+   - Authenticated via `POST /api/auth/staff/login` with PBKDF2-HMAC-SHA256 (`Staff@123`).
+   - Receives an in-memory 64-character bearer token.
+   - Full access to the operational dashboard featuring 5 real-time KPI summary cards.
+   - Product catalog management with intelligent duplicate restock logic and soft deactivation.
+   - Multi-batch tracking with FEFO (First-Expired, First-Out) stock deduction and nearest-expiry date synchronization.
+   - Daily price and discount auditing via `price_history`.
+   - Inventory management (`/inventory`) with manual stock additions, write-offs, and an immutable audit ledger (`inventory_movements`).
+   - Category and brand taxonomy management (`category_brands`).
+   - Complete historical billing audit register (`/transactions`).
 
 ---
 

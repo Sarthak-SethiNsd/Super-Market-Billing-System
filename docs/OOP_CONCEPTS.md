@@ -324,20 +324,189 @@ If a stock deduction fails or an exception is thrown mid-checkout, `~Transaction
 
 ---
 
-## 14. Exception Handling Architecture
+## 14. Exception Handling Architecture & Polymorphic Domain Hierarchy
 
-### Exception Taxonomy
-```
-std::exception (polymorphic base class)
-  ├── std::logic_error
-  │     └── std::invalid_argument     (Domain contract & input validation failures)
-  ├── std::runtime_error             (Operational failures, stock depletion & SQLite errors)
-  └── nlohmann::json::exception      (JSON schema parsing & payload deserialization errors)
+### Implementation
+- **Header:** [`backend/include/utils/Exceptions.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/utils/Exceptions.hpp)
+- **Applied In:**
+  - [`backend/include/models/Discount.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/models/Discount.hpp) & [`backend/src/models/Discount.cpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/src/models/Discount.cpp)
+  - [`backend/include/models/Product.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/models/Product.hpp) & [`backend/src/models/Product.cpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/src/models/Product.cpp)
+  - [`backend/src/repositories/BillRepository.cpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/src/repositories/BillRepository.cpp)
+  - [`backend/src/repositories/ProductBatchRepository.cpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/src/repositories/ProductBatchRepository.cpp)
+  - [`backend/include/controllers/CartController.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/controllers/CartController.hpp)
+  - [`backend/include/controllers/BillController.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/controllers/BillController.hpp)
+  - [`backend/include/controllers/ProductController.hpp`](file:///C:/Users/LENOVO/Desktop/OOPS-Sem-III-Lab/Supermarket_Submission_Staging/Supermarket_Management_System/backend/include/controllers/ProductController.hpp)
+
+---
+
+### Class Hierarchy & Multiple Inheritance Diagram
+
+The system employs a custom **Polymorphic Domain Exception Hierarchy** that seamlessly bridges standard C++ runtime/logic exceptions with an abstract domain interface:
+
+```text
+                     std::exception
+                      ▲          ▲
+                      │          │
+        std::logic_error        std::runtime_error       ISupermarketException
+              ▲                        ▲                  (Abstract Interface)
+              │                        │                  [virtual what() = 0]
+      std::invalid_argument            │                           ▲
+         ▲              ▲              │                           │
+         │              │              │                           │
+         │   ┌──────────┴──────────────┼───────────────────────────┤
+         │   │                         │                           │
+         │   │              SupermarketException ──────────────────┘
+         │   │
+         │   └────── InvalidDiscountException ─────────────────────┐
+         │                                                         │
+         └────────── InvalidQuantityException ─────────────────────┤
+                                                                   │
+                            InsufficientStockException ────────────┘
 ```
 
-1. **`std::invalid_argument`:** Thrown when constructing a product with negative price or negative initial stock, or when attempting to mutate price to a negative value.
-2. **`std::runtime_error`:** Thrown when an inventory decrement exceeds currently available units, or when an SQLite query fails.
-3. **`nlohmann::json::exception`:** Caught when clients supply malformed JSON payloads.
+```cpp
+/**
+ * @brief Base domain exception interface for the Supermarket Management System.
+ * Demonstrates OOP Exception Hierarchy, Abstraction, and Polymorphism.
+ */
+class ISupermarketException {
+public:
+    virtual ~ISupermarketException() = default;
+    virtual const char* what() const noexcept = 0;
+};
+
+/**
+ * @brief Base domain exception class inheriting from std::runtime_error and ISupermarketException.
+ * Demonstrates multiple inheritance and OOP domain exception architecture.
+ */
+class SupermarketException : public std::runtime_error, public ISupermarketException {
+public:
+    explicit SupermarketException(const std::string& message)
+        : std::runtime_error(message) {}
+
+    const char* what() const noexcept override {
+        return std::runtime_error::what();
+    }
+};
+
+/**
+ * @brief Thrown when an invalid quantity (<= 0, negative, or invalid type) is provided.
+ * Inherits from std::invalid_argument (logic error) and ISupermarketException.
+ */
+class InvalidQuantityException : public std::invalid_argument, public ISupermarketException {
+public:
+    explicit InvalidQuantityException(const std::string& message = "Invalid quantity: must be positive")
+        : std::invalid_argument(message) {}
+
+    const char* what() const noexcept override {
+        return std::invalid_argument::what();
+    }
+};
+
+/**
+ * @brief Thrown when requested purchase/deduction quantity exceeds available inventory stock.
+ * Inherits from std::runtime_error and ISupermarketException.
+ * Fully encapsulates state: requested units, available units, and target product name.
+ */
+class InsufficientStockException : public std::runtime_error, public ISupermarketException {
+private:
+    int requested = 0;
+    int available = 0;
+    std::string productName;
+
+public:
+    InsufficientStockException(int req, int avail, const std::string& prodName = "")
+        : std::runtime_error(
+            "Requested quantity " + std::to_string(req) +
+            " exceeds available stock " + std::to_string(avail) +
+            (prodName.empty() ? "" : " for product '" + prodName + "'")
+          ),
+          requested(req),
+          available(avail),
+          productName(prodName) {}
+
+    const char* what() const noexcept override {
+        return std::runtime_error::what();
+    }
+
+    int getRequested() const noexcept { return requested; }
+    int getAvailable() const noexcept { return available; }
+    const std::string& getProductName() const noexcept { return productName; }
+};
+
+/**
+ * @brief Thrown when an invalid discount configuration (negative, >100%, invalid type) is provided.
+ * Inherits from std::invalid_argument and ISupermarketException.
+ */
+class InvalidDiscountException : public std::invalid_argument, public ISupermarketException {
+public:
+    explicit InvalidDiscountException(const std::string& message)
+        : std::invalid_argument(message) {}
+
+    const char* what() const noexcept override {
+        return std::invalid_argument::what();
+    }
+};
+```
+
+---
+
+### Mapping to Core OOP Tenets
+
+1. **Abstraction:**
+   - `ISupermarketException` serves as a pure abstract contract (`interface`).
+   - It specifies the pure virtual signature `virtual const char* what() const noexcept = 0;` and a virtual destructor `virtual ~ISupermarketException() = default;`, requiring all concrete domain exceptions to provide an explanatory error message without mandating specific internal member variables.
+
+2. **Multiple Inheritance:**
+   - Concrete exceptions like `InvalidQuantityException` and `InsufficientStockException` use C++ multiple inheritance:
+     $$\text{InvalidQuantityException} \to (\text{std::invalid\_argument},\, \text{ISupermarketException})$$
+     $$\text{InsufficientStockException} \to (\text{std::runtime\_error},\, \text{ISupermarketException})$$
+   - This architectural choice ensures backward compatibility with standard STL exception handlers (`catch (const std::exception& e)`) while simultaneously allowing fine-grained, domain-specific polymorphic catches (`catch (const ISupermarketException& e)`).
+
+3. **Polymorphism & Dynamic Dispatch:**
+   - Handlers in Crow REST API controllers leverage dynamic dispatch via vtables. Catching by base reference invokes the correct overridden `what()` method:
+   ```cpp
+   try {
+       // Domain operations (cart reserve, bill checkout, batch intake)
+   } catch (const InsufficientStockException& e) {
+       // Access rich encapsulated telemetry
+       logTelemetry(e.getProductName(), e.getRequested(), e.getAvailable());
+       return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+   } catch (const ISupermarketException& e) {
+       // Polymorphic catch for any supermarket domain exception
+       return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+   } catch (const std::exception& e) {
+       // Catch-all for standard runtime/logic exceptions
+       return ControllerUtils::errorResponse(500, e.what(), allowedOrigin);
+   }
+   ```
+
+4. **Encapsulation:**
+   - In `InsufficientStockException`, the attributes `requested`, `available`, and `productName` are declared strictly `private`.
+   - External callers and telemetry middleware query state exclusively via immutable const member functions: `getRequested()`, `getAvailable()`, and `getProductName()`. The internal formatting of the diagnostic string remains completely decoupled from caller logic.
+
+---
+
+### Strict Boundary & Exception Validations
+
+The domain layer enforces strict mathematical boundaries across all business operations:
+
+1. **Strict Quantity Bounds:**
+   - Zero or negative quantities ($q \le 0$) are strictly prohibited in `CartController`, `ProductController`, `BillRepository`, and `ProductBatchRepository`.
+   - Any attempt to add $\le 0$ items to a cart or invoice instantly throws `InvalidQuantityException`, mapped to HTTP `400 Bad Request`.
+2. **Available Stock Protection:**
+   - Before any deduction occurs, `ProductRepository` and `BillRepository` check:
+     $$\text{requested} \le \text{availableStock}$$
+   - If stock is insufficient, an `InsufficientStockException` is thrown, aborting the transaction before any database mutations occur.
+3. **Discount Bounds & Price Clamping:**
+   - Percentage discounts must satisfy:
+     $$0.0\% \le \text{discountPercent} \le 100.0\%$$
+     Values outside this range throw `InvalidDiscountException`.
+   - Fixed cash discounts must satisfy:
+     $$\text{discountPaise} \ge 0$$
+   - **Clamping Guarantee:** The final discounted unit price is mathematically clamped at zero:
+     $$\text{finalUnitPricePaise} = \max\bigl(0\text{ paise},\, \text{unitPricePaise} - \text{discountPaise}\bigr)$$
+     Unit prices and invoice totals can **never become negative**, even if a fixed promotional coupon exceeds the item's base shelf price.
 
 ---
 

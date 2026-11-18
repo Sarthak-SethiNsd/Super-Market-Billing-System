@@ -93,9 +93,15 @@ bool DemoDataSeeder::seedIfEmpty(DatabaseConnection& db) {
         if (!brandRepo.findByName(item.brandName).has_value()) {
             brandRepo.insert(item.brandName);
         }
+        auto brand = brandRepo.findByName(item.brandName);
+        auto category = catRepo.findByName(item.categoryName);
+        if (brand.has_value() && category.has_value()) {
+            if (!catRepo.hasBrand(category->id, brand->id)) {
+                catRepo.addBrand(category->id, brand->id);
+            }
+        }
+
         if (!productRepo.findBySku(item.sku).has_value()) {
-            auto brand = brandRepo.findByName(item.brandName);
-            auto category = catRepo.findByName(item.categoryName);
 
             std::shared_ptr<IDiscountStrategy> discount;
             if (item.discountType == "PERCENTAGE") {

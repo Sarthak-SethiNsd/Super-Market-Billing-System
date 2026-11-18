@@ -37,10 +37,10 @@ This project re-engineers that baseline into a high-concurrency, multi-tiered cl
 3. A reactive **React 19 / TypeScript 5 Single-Page Application (SPA)** built with Vite and styled with Tailwind CSS.
 
 The system enforces a clean **Two-Mode Role Architecture**:
-- **Customer Mode:** An open, unauthenticated public portal enabling customers to discover products, check real-time shelf prices, add items to a self-service shopping cart, execute atomic checkouts, and print itemized thermal receipts.
-- **Staff Mode:** A password-authenticated operational management environment protected by PBKDF2-HMAC-SHA256 password hashing and tokenized sessions. Authenticated staff gain full access to operational KPI analytics, product inventory management, stock intake and write-off auditing, brand and category relationship taxonomy, and transaction ledgers.
+- **Customer Mode:** An open, unauthenticated public portal enabling customers to discover products, check real-time shelf prices, place temporary 15-minute stock holds via a **Multi-Session Reserved Stock System** (`product_reservations`), execute an **Atomic Purchase Approval & Checkout Model** (`POST /api/bills`), and print itemized 80mm thermal receipts.
+- **Staff Mode:** A password-authenticated operational management environment protected by PBKDF2-HMAC-SHA256 password hashing and tokenized sessions. Authenticated staff gain full access to operational KPI analytics, product inventory management with **Intelligent Duplicate Restock Logic**, **Multi-Batch FEFO (First-Expired, First-Out) Tracking**, **Perishable Expiry Synchronization**, **Daily Price & Discount History Auditing** (`price_history`), category/brand taxonomies, and transaction ledgers.
 
-Financial integrity is strictly enforced across all database tables and algorithms using a **64-bit signed integer representation of currency in paise** ($\text{INR } 1.00 = 100\text{ paise}$), eliminating binary floating-point rounding errors. All core OOP tenets—encapsulation, abstraction, polymorphic inheritance, diamond inheritance disambiguation, templates, RAII, operator overloading, and design patterns (Strategy, Repository)—are deeply integrated into real domain operations.
+Financial integrity is strictly enforced across all database tables and algorithms using a **64-bit signed integer representation of currency in paise** ($\text{INR } 1.00 = 100\text{ paise}$), eliminating binary floating-point rounding errors. All core OOP tenets—encapsulation, abstraction, polymorphic inheritance, diamond inheritance disambiguation, templates, RAII, operator overloading, design patterns (Strategy, Repository), and a custom **Polymorphic C++ OOP Exception Hierarchy**—are deeply integrated into real domain operations.
 
 ---
 
@@ -225,22 +225,31 @@ graph TD
 
 ## 11. Implementation Details
 
-### 11.1 C++ OOP Core Domain Models
+### 11.1 C++ OOP Core Domain Models & Polymorphic Exceptions
 - **`Product` (Abstract Base):** Declares pure virtual methods `getProductType()` and `isExpired()`. Encapsulates SKU, name, price in paise, discount strategy pointer (`std::unique_ptr<IDiscountStrategy>`), and `StockInfo`.
 - **`Perishable` & `NonPerishable`:** Specialize `Product`. `Perishable` stores an ISO-8601 expiry string and validates date thresholds.
-- **`DiscountStrategy` Pattern:** Implements polymorphic discount algorithms (`NoDiscount`, `PercentageDiscount`, `FixedDiscount`) inheriting from abstract base `IDiscountStrategy`.
+- **`ProductBatch`:** Represents delivery lots for perishable goods, enabling First-Expired, First-Out (FEFO) stock deduction.
+- **`DiscountStrategy` Pattern:** Implements polymorphic discount algorithms (`NoDiscount`, `PercentageDiscount`, `FixedDiscount`) inheriting from abstract base `IDiscountStrategy`. Clamps final unit price at zero paise.
+- **Polymorphic C++ Exception Hierarchy (`backend/include/utils/Exceptions.hpp`):**
+  - `ISupermarketException`: Abstract interface declaring pure virtual `what()`.
+  - `SupermarketException`: Concrete base domain exception.
+  - `InvalidQuantityException`: Derived from `std::invalid_argument` and `ISupermarketException`. Thrown when $q \le 0$.
+  - `InsufficientStockException`: Derived from `std::runtime_error` and `ISupermarketException`. Encapsulates `requested`, `available`, and `productName` with getters: `.getRequested()`, `.getAvailable()`, `.getProductName()`.
+  - `InvalidDiscountException`: Derived from `std::invalid_argument` and `ISupermarketException`. Thrown when discount rates are outside $[0.0\%, 100.0\%]$ or fixed amounts are negative.
 - **`Bill` & `BillItem`:** Represent customer invoices. `BillItem` snapshots product names and unit prices at purchase time, isolating historical invoices from future catalog edits.
 - **Operator Overloading:** `Bill::operator+=` enables clean addition of items to bills (`bill += item;`). `operator<<` provides formatted string serialization for receipts.
 
-### 11.2 Database & Persistence
+### 11.2 Database & Multi-Session Cart Holds
 - Single canonical SQLite database at `backend/data/supermarket.db`.
-- Automatic migration via `DatabaseMigrator` tracking schema version via `PRAGMA user_version`.
+- Automatic transactional migration via `DatabaseMigrator` tracking schema version via `PRAGMA user_version = 6;`.
+- **Multi-Session Reserved Stock System (`product_reservations`):** 15-minute TTL cart holds isolate stock among concurrent shoppers, calculating available stock dynamically ($\text{available} = \max(0, \text{total} - \text{reserved})$).
+- **Audit Trails:** `inventory_movements` (stock changes) and `price_history` (daily price & discount audits).
 - Write-Ahead Logging (`PRAGMA journal_mode = WAL;`) enables concurrent readers while write transactions execute.
 - Foreign keys enforced with `PRAGMA foreign_keys = ON;`.
 
 ### 11.3 Security & Role Management
-- Single role upgrade path: On server startup, legacy `ADMIN` database records are converted to `STAFF`.
-- `AuthService::loginStaff(password)` verifies the provided string using PBKDF2-HMAC-SHA256. Upon success, an in-memory session token is issued with a 24-hour expiration.
+- Single role upgrade path: Staff mode protected by PBKDF2-HMAC-SHA256 (100,000 iterations, 128-bit salt).
+- `AuthService::loginStaff(password)` verifies the provided string (`Staff@123`). Upon success, an in-memory session token is issued with a 24-hour expiration.
 - Public customer operations require no authentication. Protected management endpoints call `requireStaff(req, authService)`, rejecting unauthorized requests with HTTP 401.
 
 ---
@@ -249,15 +258,15 @@ graph TD
 
 Testing incorporates both automated backend unit/integration suites and frontend production verification:
 
-```
-Total Test Cases: 34 / 34 PASSED (100% Success Rate)
+```text
+Total Test Cases: 39 / 39 PASSED (100% Success Rate across 5 Suites)
 ```
 
-1. **`DiscountSuite` (5 tests):** Validates percentage discounts (e.g., 10% off 50000 paise = 5000 paise discount), fixed discounts, zero discount edge cases, and bounds clamping.
-2. **`InventorySuite` (5 tests):** Validates initial stock values, positive stock intake, valid deductions, negative quantity exceptions, and prevention of stock deductions exceeding current balance.
-3. **`BillingSuite` (6 tests):** Validates empty bills, subtotal additions, discount deductions, `operator+=` composition, `operator<<` stream formatting, and diamond inheritance polymorphism.
-4. **`DatabaseSuite` (6 tests):** Verifies database creation, migration version advancement, repository CRUD, transaction rollbacks on errors, and foreign key constraint enforcement.
-5. **`ApiSuite` (12 tests):** Validates Crow HTTP routing, default unauthenticated customer session, staff login rejection on bad passwords, staff login acceptance on correct password, route access control, atomic checkout execution, and stock decrement persistence.
+1. **`DiscountSuite` (6 tests):** Validates percentage discounts, fixed discounts, zero discount edge cases, negative fixed discounts, percentage bounds, price clamping, and polymorphic exception hierarchy catching.
+2. **`InventorySuite` (6 tests):** Validates initial stock values, positive stock intake, valid deductions, negative quantity exceptions, stock underflow rejection (`InsufficientStockException`), and `StockInfo` nested class boundaries.
+3. **`BillingSuite` (6 tests):** Validates empty bills, subtotal additions, discount deductions, `operator+=` composition, `operator<<` stream formatting, diamond inheritance polymorphism, and generic template containers (`Repository<T>`, `ApiResponse<T>`).
+4. **`DatabaseSuite` (8 tests):** Verifies database creation, migration version advancement (v1-v6), repository CRUD, transaction rollbacks on errors, customer CRM repository, and `ProductReservationRepository` multi-session hold logic.
+5. **`ApiSuite` (13 tests):** Validates Crow HTTP routing, default unauthenticated customer session, staff login rejection on bad passwords, staff login acceptance on correct password, route access control, atomic checkout execution, stock decrement persistence, PBKDF2 cross-platform vectors, and multi-session cart reservation isolation.
 6. **Frontend Production Build:** Verified via `tsc -b && vite build` (compiled in $18.29\text{ s}$ with 0 TypeScript errors).
 
 ---
