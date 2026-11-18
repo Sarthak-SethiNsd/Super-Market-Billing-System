@@ -178,7 +178,7 @@ export const AnalyticsPage: React.FC = () => {
     }
 
     return [
-      { name: 'Sales (Checkout)', value: counts.SALE, color: '#285943' },
+      { name: 'Purchases (Checkout)', value: counts.SALE, color: '#285943' },
       { name: 'Restock (Addition)', value: counts.ADDITION, color: '#71836A' },
       { name: 'Reductions', value: counts.REDUCTION, color: '#A63A38' },
       { name: 'Adjustments', value: counts.ADJUSTMENT, color: '#C87D20' },
@@ -248,7 +248,7 @@ export const AnalyticsPage: React.FC = () => {
         <Card className="p-4 border-[#E5E4DC]">
           <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
             <DollarSign className="w-4 h-4 text-[#285943]" />
-            Net Revenue
+            Net Sales Revenue
           </div>
           <div className="text-2xl font-bold text-[#285943] font-mono">
             ₹{netRevenue.toFixed(2)}
@@ -259,7 +259,7 @@ export const AnalyticsPage: React.FC = () => {
         <Card className="p-4 border-[#E5E4DC]">
           <div className="flex items-center gap-1.5 text-[#777D76] text-xs font-semibold uppercase tracking-wider mb-1">
             <CreditCard className="w-4 h-4 text-[#71836A]" />
-            Total Orders
+            Total Purchases
           </div>
           <div className="text-2xl font-bold text-[#303631] font-mono">
             {totalBills}
@@ -275,7 +275,7 @@ export const AnalyticsPage: React.FC = () => {
           <div className="text-2xl font-bold text-[#303631] font-mono">
             {totalItemsSold}
           </div>
-          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'All units checked out' : 'In filtered period'}</span>
+          <span className="text-[11px] text-[#777D76]">{isAllTime ? 'All units purchased' : 'In filtered period'}</span>
         </Card>
 
         <Card className="p-4 border-[#E5E4DC]">
@@ -308,8 +308,8 @@ export const AnalyticsPage: React.FC = () => {
       ) : totalBills === 0 ? (
         <EmptyState
           icon={BarChart3}
-          title="No Sales Transactions Recorded"
-          description="Complete orders in Billing & Checkout to generate real revenue and sales analytics."
+          title="No Purchase Transactions Recorded"
+          description="Confirm purchases in Billing &amp; Checkout to generate real revenue and sales analytics."
         />
       ) : (
         <div className="space-y-6">
@@ -320,10 +320,10 @@ export const AnalyticsPage: React.FC = () => {
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
-                    Revenue & Sales Timeline
+                    Revenue &amp; Sales Timeline
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Comparison between Gross Sales and Net Paid Revenue over time
+                    Comparison between Gross Sales and Net Sales Revenue over time
                   </CardDescription>
                 </div>
                 <Badge variant="default" className="text-xs font-mono">
@@ -365,7 +365,7 @@ export const AnalyticsPage: React.FC = () => {
                     <Area
                       type="monotone"
                       dataKey="revenue"
-                      name="Net Paid Revenue"
+                      name="Net Sales Revenue"
                       stroke="#285943"
                       strokeWidth={2.5}
                       fillOpacity={1}

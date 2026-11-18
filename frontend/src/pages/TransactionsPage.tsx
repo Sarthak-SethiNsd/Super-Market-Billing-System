@@ -172,7 +172,7 @@ export const TransactionsPage: React.FC = () => {
           <div className="text-2xl font-bold text-[#285943] font-mono">
             ₹{netRevenue.toFixed(2)}
           </div>
-          <span className="text-[11px] text-[#777D76]">Total collected amount</span>
+          <span className="text-[11px] text-[#777D76]">Total recorded purchase amount</span>
         </Card>
       </div>
 
@@ -240,7 +240,7 @@ export const TransactionsPage: React.FC = () => {
               description={
                 searchQuery
                   ? `No invoices match "${searchQuery}".`
-                  : 'No checkout transactions have been recorded yet.'
+                  : 'No purchase transactions have been recorded yet.'
               }
               className="border-0 p-12"
             />
@@ -253,7 +253,7 @@ export const TransactionsPage: React.FC = () => {
                   <th className="py-3 px-4 text-center">Items</th>
                   <th className="py-3 px-4 text-right">Subtotal</th>
                   <th className="py-3 px-4 text-right">Promotions</th>
-                  <th className="py-3 px-4 text-right">Final Paid</th>
+                  <th className="py-3 px-4 text-right">Purchase Total</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>

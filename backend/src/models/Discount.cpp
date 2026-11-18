@@ -1,4 +1,5 @@
 #include "models/Discount.hpp"
+#include "utils/Exceptions.hpp"
 #include <sstream>
 #include <iomanip>
 
@@ -30,7 +31,7 @@ std::unique_ptr<IDiscountStrategy> NoDiscount::clone() const {
 // ==========================================
 PercentageDiscount::PercentageDiscount(double p) : percent(p) {
     if (p < 0.0 || p > 100.0) {
-        throw std::invalid_argument("Discount percentage must be between 0.0 and 100.0");
+        throw InvalidDiscountException("Discount percentage must be between 0.0 and 100.0");
     }
 }
 
@@ -70,13 +71,13 @@ double PercentageDiscount::getPercent() const {
 // ==========================================
 FixedAmountDiscount::FixedAmountDiscount(int64_t amountInPaise) : amountInPaise(amountInPaise) {
     if (amountInPaise < 0) {
-        throw std::invalid_argument("Fixed discount amount cannot be negative");
+        throw InvalidDiscountException("Fixed discount amount cannot be negative");
     }
 }
 
 FixedAmountDiscount FixedAmountDiscount::fromRupees(double rupees) {
     if (rupees < 0.0) {
-        throw std::invalid_argument("Fixed discount amount cannot be negative");
+        throw InvalidDiscountException("Fixed discount amount cannot be negative");
     }
     int64_t paise = static_cast<int64_t>(std::round(rupees * 100.0));
     return FixedAmountDiscount(paise);
@@ -121,7 +122,7 @@ double FixedAmountDiscount::getAmountInRupees() const {
 // ==========================================
 Discount::Discount(double p) : percent(p) {
     if (p < 0.0 || p > 100.0) {
-        throw std::invalid_argument("Discount must be 0-100");
+        throw InvalidDiscountException("Discount must be 0-100");
     }
 }
 

@@ -1,5 +1,6 @@
 #include "strategies/IDiscountStrategy.hpp"
 #include "models/Discount.hpp"
+#include "utils/Exceptions.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -99,6 +100,35 @@ void testFixedDiscountExceedingProductPrice() {
     std::cout << "  -> PASSED\n";
 }
 
+void testCustomExceptionHierarchyAndPolymorphism() {
+    std::cout << "[RUNNING] testCustomExceptionHierarchyAndPolymorphism...\n";
+    bool caughtAsSupermarket = false;
+    bool caughtAsStdException = false;
+    std::string errMsg;
+
+    try {
+        PercentageDiscount invalidP(-15.0);
+        (void)invalidP;
+    } catch (const ISupermarketException& e) {
+        caughtAsSupermarket = true;
+        errMsg = e.what();
+    }
+    TEST_ASSERT(caughtAsSupermarket);
+    TEST_ASSERT(errMsg.find("between 0.0 and 100.0") != std::string::npos);
+
+    try {
+        FixedAmountDiscount invalidF(-500);
+        (void)invalidF;
+    } catch (const std::exception& e) {
+        caughtAsStdException = true;
+        std::string msg = e.what();
+        TEST_ASSERT(msg.find("cannot be negative") != std::string::npos);
+    }
+    TEST_ASSERT(caughtAsStdException);
+
+    std::cout << "  -> PASSED (OOP Exception Hierarchy Verified)\n";
+}
+
 int main() {
     std::cout << "=== RUNNING DISCOUNT SUITE TESTS ===\n";
     try {
@@ -107,7 +137,8 @@ int main() {
         testInvalidPercentageRejection();
         testNegativeFixedDiscountRejection();
         testFixedDiscountExceedingProductPrice();
-        std::cout << "=== ALL DISCOUNT TESTS PASSED (5/5) ===\n";
+        testCustomExceptionHierarchyAndPolymorphism();
+        std::cout << "=== ALL DISCOUNT TESTS PASSED (6/6) ===\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Test failed: " << e.what() << "\n";

@@ -1,9 +1,17 @@
 #include "repositories/ProductBatchRepository.hpp"
 #include "database/DatabaseConnection.hpp"
 #include "database/PreparedStatement.hpp"
+#include "utils/Exceptions.hpp"
 #include <algorithm>
 
 int ProductBatchRepository::addBatch(int productId, const std::string& batchNumber, int quantity, const std::string& expiryDate) {
+    if (productId <= 0) {
+        throw std::invalid_argument("Product ID must be positive");
+    }
+    if (quantity <= 0) {
+        throw InvalidQuantityException("Batch quantity must be positive");
+    }
+
     PreparedStatement stmt(db, R"(
         INSERT INTO product_batches (product_id, batch_number, quantity, expiry_date)
         VALUES (?, ?, ?, ?);
@@ -102,7 +110,10 @@ void ProductBatchRepository::updateProductNearestExpiry(int productId) {
 }
 
 void ProductBatchRepository::deductStockFEFO(int productId, int quantityToDeduct) {
-    if (quantityToDeduct <= 0) return;
+    if (quantityToDeduct < 0) {
+        throw InvalidQuantityException("Deduction quantity cannot be negative");
+    }
+    if (quantityToDeduct == 0) return;
 
     PreparedStatement countStmt(db, "SELECT COUNT(*) FROM product_batches WHERE product_id = ?;");
     countStmt.bind(1, productId);

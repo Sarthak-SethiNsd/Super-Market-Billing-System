@@ -8,6 +8,7 @@
 #include "repositories/BillRepository.hpp"
 #include "repositories/InventoryRepository.hpp"
 #include "repositories/CustomerRepository.hpp"
+#include "repositories/ProductReservationRepository.hpp"
 #include "models/Perishable.hpp"
 #include "models/NonPerishable.hpp"
 #include "models/Discount.hpp"
@@ -42,17 +43,17 @@ void testDatabaseInitialization() {
 
         DatabaseMigrator::migrate(conn);
         int v = DatabaseMigrator::getCurrentVersion(conn);
-        TEST_ASSERT(v == 5);
+        TEST_ASSERT(v == 6);
 
         // Verify repeatable migration is non-destructive
         DatabaseMigrator::migrate(conn);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 5);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 6);
     }
 
-    // Reopen database and verify version remains 5
+    // Reopen database and verify version remains 6
     {
         DatabaseConnection conn(TEST_DB_PATH);
-        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 5);
+        TEST_ASSERT(DatabaseMigrator::getCurrentVersion(conn) == 6);
     }
 
     std::cout << "  -> PASSED\n";
@@ -502,6 +503,69 @@ void testCustomerRepository() {
     std::cout << "  -> PASSED\n";
 }
 
+void testProductReservationRepository() {
+    std::cout << "[RUNNING] testProductReservationRepository...\n";
+    cleanTestDb();
+    DatabaseConnection conn(TEST_DB_PATH);
+    DatabaseMigrator::migrate(conn);
+
+    BrandRepository brandRepo(conn);
+    CategoryRepository catRepo(conn);
+    ProductRepository prodRepo(conn);
+    ProductReservationRepository resRepo(conn);
+
+    int bId = brandRepo.insert("Britannia");
+    int cId = catRepo.insert("Bakery");
+    NonPerishable biscuit(0, "SKU-RESERVE-01", "Good Day Butter", bId, cId, 3000, 10);
+    int pId = prodRepo.insert(biscuit);
+
+    // Initial state: 10 physical, 0 reserved
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 0);
+
+    // 1. Session A reserves 3 units
+    int avail = 0;
+    bool ok = resRepo.reserve("sessionA", pId, 3, 900, avail);
+    TEST_ASSERT(ok);
+    TEST_ASSERT(avail == 10);
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 3);
+
+    // 2. Session B reserves 5 units (available was 10 - 3 = 7)
+    ok = resRepo.reserve("sessionB", pId, 5, 900, avail);
+    TEST_ASSERT(ok);
+    TEST_ASSERT(avail == 7);
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 8);
+
+    // 3. Session B tries to reserve 8 units (total would be 3 by A + 8 = 11 > 10) => REJECTED
+    ok = resRepo.reserve("sessionB", pId, 8, 900, avail);
+    TEST_ASSERT(!ok);
+    TEST_ASSERT(avail == 7); // max available for B was 7
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 8); // unchanged
+
+    // 4. Session A updates reservation to 2 units
+    ok = resRepo.reserve("sessionA", pId, 2, 900, avail);
+    TEST_ASSERT(ok);
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 7); // 2 by A + 5 by B
+
+    // 5. Inspect session items for Session A
+    auto aItems = resRepo.getSessionReservations("sessionA");
+    TEST_ASSERT(aItems.size() == 1);
+    TEST_ASSERT(aItems[0].productId == pId);
+    TEST_ASSERT(aItems[0].quantity == 2);
+    TEST_ASSERT(aItems[0].remainingSeconds > 0);
+
+    // 6. Session A clears cart
+    int cleared = resRepo.clearSession("sessionA");
+    TEST_ASSERT(cleared == 1);
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 5); // only B remaining
+
+    // 7. Session B releases product
+    bool released = resRepo.release("sessionB", pId);
+    TEST_ASSERT(released);
+    TEST_ASSERT(resRepo.getReservedStock(pId) == 0);
+
+    std::cout << "  -> PASSED\n";
+}
+
 int main() {
     std::cout << "=====================================================\n";
     std::cout << "       RUNNING SQLITE DATABASE PERSISTENCE TESTS     \n";
@@ -514,9 +578,10 @@ int main() {
         testTransactionRollbackOnStockFailure();
         testFailureRecoveryAndTransactionRollback();
         testCustomerRepository();
+        testProductReservationRepository();
         cleanTestDb();
         std::cout << "=====================================================\n";
-        std::cout << "     ALL DATABASE PERSISTENCE TESTS PASSED (7/7)     \n";
+        std::cout << "     ALL DATABASE PERSISTENCE TESTS PASSED (8/8)     \n";
         std::cout << "=====================================================\n";
         return 0;
     } catch (const std::exception& e) {

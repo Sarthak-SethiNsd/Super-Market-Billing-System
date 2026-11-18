@@ -4,6 +4,7 @@
 #include "repositories/ProductRepository.hpp"
 #include "database/Transaction.hpp"
 #include "auth/AuthService.hpp"
+#include "utils/Exceptions.hpp"
 
 class InventoryController {
 public:
@@ -192,6 +193,12 @@ public:
                     };
 
                     return ControllerUtils::successResponse(data, "Stock adjusted successfully", allowedOrigin);
+                } catch (const InvalidQuantityException& e) {
+                    return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                } catch (const InsufficientStockException& e) {
+                    return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                } catch (const std::invalid_argument& e) {
+                    return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
                 } catch (const nlohmann::json::exception&) {
                     return ControllerUtils::errorResponse(400, "Malformed or invalid JSON request", allowedOrigin);
                 } catch (const std::exception& e) {

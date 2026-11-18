@@ -1,6 +1,7 @@
 #include "models/Product.hpp"
 #include "models/Perishable.hpp"
 #include "models/NonPerishable.hpp"
+#include "utils/Exceptions.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -94,7 +95,76 @@ void testStockInfoNestedClass() {
     TEST_ASSERT(info.getAvailable() == 35);
     TEST_ASSERT(info.getReserved() == 0);
     TEST_ASSERT(info.getTotal() == 35);
+
+    // Test active stock reservation partitioning
+    p.setReservedStock(10);
+    TEST_ASSERT(p.getReservedStock() == 10);
+    TEST_ASSERT(p.getAvailableStock() == 25);
+    TEST_ASSERT(p.getStock() == 35);
+
+    Product::StockInfo reservedInfo = p.getStockInfo();
+    TEST_ASSERT(reservedInfo.getAvailable() == 25);
+    TEST_ASSERT(reservedInfo.getReserved() == 10);
+    TEST_ASSERT(reservedInfo.getTotal() == 35);
     std::cout << "  -> PASSED\n";
+}
+
+void testQuantityExceptionsAndStockBoundaries() {
+    std::cout << "[RUNNING] testQuantityExceptionsAndStockBoundaries...\n";
+    Product p(30, "SKU-TEST-EX", "Test Product", 1, 1, 5000, 10);
+
+    // 1. Negative quantity throws InvalidQuantityException
+    bool caughtNeg = false;
+    try {
+        p.reduceStock(-5);
+    } catch (const InvalidQuantityException& e) {
+        caughtNeg = true;
+        TEST_ASSERT(std::string(e.what()).find("must be positive") != std::string::npos);
+    }
+    TEST_ASSERT(caughtNeg);
+
+    // 2. Zero quantity throws InvalidQuantityException
+    bool caughtZero = false;
+    try {
+        p.reduceStock(0);
+    } catch (const InvalidQuantityException& e) {
+        caughtZero = true;
+        TEST_ASSERT(std::string(e.what()).find("must be positive") != std::string::npos);
+    }
+    TEST_ASSERT(caughtZero);
+
+    // 3. Excess quantity throws InsufficientStockException with accurate getters
+    bool caughtExcess = false;
+    try {
+        p.reduceStock(25);
+    } catch (const InsufficientStockException& e) {
+        caughtExcess = true;
+        TEST_ASSERT(e.getRequested() == 25);
+        TEST_ASSERT(e.getAvailable() == 10);
+        TEST_ASSERT(e.getProductName() == "Test Product");
+        std::string msg = e.what();
+        TEST_ASSERT(msg.find("Requested quantity 25 exceeds available stock 10") != std::string::npos);
+    }
+    TEST_ASSERT(caughtExcess);
+
+    // 4. Restock with non-positive throws InvalidQuantityException
+    bool caughtAddZero = false;
+    try {
+        p.addStock(0);
+    } catch (const InvalidQuantityException&) {
+        caughtAddZero = true;
+    }
+    TEST_ASSERT(caughtAddZero);
+
+    bool caughtAddNeg = false;
+    try {
+        p.addStock(-3);
+    } catch (const InvalidQuantityException&) {
+        caughtAddNeg = true;
+    }
+    TEST_ASSERT(caughtAddNeg);
+
+    std::cout << "  -> PASSED (InvalidQuantityException and InsufficientStockException Verified)\n";
 }
 
 int main() {
@@ -105,7 +175,8 @@ int main() {
         testNegativeStockPrevention();
         testProductIdentityBasedOnId();
         testStockInfoNestedClass();
-        std::cout << "=== ALL INVENTORY TESTS PASSED (5/5) ===\n";
+        testQuantityExceptionsAndStockBoundaries();
+        std::cout << "=== ALL INVENTORY TESTS PASSED (6/6) ===\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "Test failed: " << e.what() << "\n";

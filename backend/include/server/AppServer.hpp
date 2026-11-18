@@ -23,6 +23,7 @@
 #include "controllers/InventoryController.hpp"
 #include "controllers/BillController.hpp"
 #include "controllers/CustomerController.hpp"
+#include "controllers/CartController.hpp"
 #include <memory>
 #include <iostream>
 
@@ -42,6 +43,7 @@ private:
         InventoryController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         BillController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
         CustomerController::registerRoutes(app, *dbConnection, *authService, config.allowedOrigin);
+        CartController::registerRoutes(app, *dbConnection, config.allowedOrigin);
     }
 
 public:

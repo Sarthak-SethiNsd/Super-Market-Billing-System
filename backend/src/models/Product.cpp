@@ -1,5 +1,6 @@
 #include "models/Product.hpp"
 #include "models/Discount.hpp"
+#include "utils/Exceptions.hpp"
 #include <iomanip>
 #include <cmath>
 
@@ -41,6 +42,7 @@ Product::Product() {
     this->categoryId = 0;
     this->priceInPaise = 0;
     this->stock = 0;
+    this->reservedStock = 0;
     this->discountStrategy = std::make_shared<NoDiscount>();
 
     totalProducts++;
@@ -59,7 +61,7 @@ Product::Product(int id,
         throw std::invalid_argument("Product price cannot be negative");
     }
     if (initialStock < 0) {
-        throw std::invalid_argument("Initial stock cannot be negative");
+        throw InvalidQuantityException("Initial stock cannot be negative");
     }
 
     this->id = id;
@@ -69,6 +71,7 @@ Product::Product(int id,
     this->categoryId = categoryId;
     this->priceInPaise = priceInPaise;
     this->stock = initialStock;
+    this->reservedStock = 0;
     this->discountStrategy = discount ? discount : std::make_shared<NoDiscount>();
 
     totalProducts++;
@@ -80,7 +83,7 @@ Product::Product(const std::string& name, double priceInRupees, int initialStock
         throw std::invalid_argument("Price cannot be negative");
     }
     if (initialStock < 0) {
-        throw std::invalid_argument("Stock cannot be negative");
+        throw InvalidQuantityException("Stock cannot be negative");
     }
 
     this->id = totalProducts + 1;
@@ -90,6 +93,7 @@ Product::Product(const std::string& name, double priceInRupees, int initialStock
     this->categoryId = 1;
     this->priceInPaise = static_cast<int64_t>(std::round(priceInRupees * 100.0));
     this->stock = initialStock;
+    this->reservedStock = 0;
     this->discountStrategy = std::make_shared<NoDiscount>();
 
     totalProducts++;
@@ -112,6 +116,7 @@ Product::Product(const Product& other) {
     this->categoryId = other.categoryId;
     this->priceInPaise = other.priceInPaise;
     this->stock = other.stock;
+    this->reservedStock = other.reservedStock;
     if (other.discountStrategy) {
         this->discountStrategy = other.discountStrategy->clone();
     } else {
@@ -133,6 +138,7 @@ Product& Product::operator=(const Product& other) {
         this->categoryId = other.categoryId;
         this->priceInPaise = other.priceInPaise;
         this->stock = other.stock;
+        this->reservedStock = other.reservedStock;
         if (other.discountStrategy) {
             this->discountStrategy = other.discountStrategy->clone();
         } else {
@@ -152,9 +158,11 @@ Product::Product(Product&& other) noexcept {
     this->categoryId = other.categoryId;
     this->priceInPaise = other.priceInPaise;
     this->stock = other.stock;
+    this->reservedStock = other.reservedStock;
     this->discountStrategy = std::move(other.discountStrategy);
 
     other.stock = 0;
+    other.reservedStock = 0;
     totalProducts++;
 }
 
@@ -169,9 +177,11 @@ Product& Product::operator=(Product&& other) noexcept {
         this->categoryId = other.categoryId;
         this->priceInPaise = other.priceInPaise;
         this->stock = other.stock;
+        this->reservedStock = other.reservedStock;
         this->discountStrategy = std::move(other.discountStrategy);
 
         other.stock = 0;
+        other.reservedStock = 0;
     }
     return *this;
 }
@@ -187,6 +197,15 @@ int Product::getCategoryId() const { return categoryId; }
 int64_t Product::getPriceInPaise() const { return priceInPaise; }
 double Product::getPrice() const { return static_cast<double>(priceInPaise) / 100.0; }
 int Product::getStock() const { return stock; }
+int Product::getReservedStock() const { return reservedStock; }
+int Product::getAvailableStock() const { return (std::max)(0, stock - reservedStock); }
+
+void Product::setReservedStock(int reserved) {
+    if (reserved < 0) {
+        throw std::invalid_argument("Reserved stock cannot be negative");
+    }
+    this->reservedStock = reserved;
+}
 
 int64_t Product::getDiscountedPriceInPaise() const {
     if (!discountStrategy) return priceInPaise;
@@ -221,10 +240,10 @@ void Product::setPriceInRupees(double newPriceInRupees) {
 
 void Product::reduceStock(int quantity) {
     if (quantity <= 0) {
-        throw std::invalid_argument("Quantity must be positive");
+        throw InvalidQuantityException("Quantity must be positive");
     }
     if (quantity > this->stock) {
-        throw std::runtime_error("Not enough stock for product: " + this->name);
+        throw InsufficientStockException(quantity, this->stock, this->name);
     }
     this->stock -= quantity;
     totalStockUnits -= quantity;
@@ -232,14 +251,14 @@ void Product::reduceStock(int quantity) {
 
 void Product::addStock(int quantity) {
     if (quantity <= 0) {
-        throw std::invalid_argument("Restock quantity must be positive");
+        throw InvalidQuantityException("Restock quantity must be positive");
     }
     this->stock += quantity;
     totalStockUnits += quantity;
 }
 
 Product::StockInfo Product::getStockInfo() const {
-    return StockInfo(0, this->stock);
+    return StockInfo(this->reservedStock, (std::max)(0, this->stock - this->reservedStock));
 }
 
 void Product::display() const {

@@ -2,6 +2,7 @@
 #include "database/DatabaseConnection.hpp"
 #include "database/PreparedStatement.hpp"
 #include "models/Discount.hpp"
+#include "utils/Exceptions.hpp"
 #include <stdexcept>
 
 std::shared_ptr<Product> ProductRepository::rowToProduct(PreparedStatement& stmt) {
@@ -193,7 +194,7 @@ bool ProductRepository::update(const Product& product) {
 
 bool ProductRepository::updateStock(int productId, int newStock) {
     if (newStock < 0) {
-        throw std::invalid_argument("Stock quantity cannot be negative");
+        throw InvalidQuantityException("Stock quantity cannot be negative");
     }
 
     PreparedStatement stmt(db, "UPDATE products SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;");

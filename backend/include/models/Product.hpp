@@ -34,6 +34,7 @@ private:
     int categoryId;
     int64_t priceInPaise;
     int stock;
+    int reservedStock;
     std::shared_ptr<IDiscountStrategy> discountStrategy;
 
 public:
@@ -95,6 +96,9 @@ public:
     int64_t getPriceInPaise() const;
     double getPrice() const; // In Rupees (preserves original interface)
     int getStock() const;
+    int getReservedStock() const;
+    int getAvailableStock() const;
+    void setReservedStock(int reserved);
 
     int64_t getDiscountedPriceInPaise() const;
     double getDiscountedPriceInRupees() const;

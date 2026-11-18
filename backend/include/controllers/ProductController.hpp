@@ -5,11 +5,13 @@
 #include "repositories/CategoryRepository.hpp"
 #include "repositories/InventoryRepository.hpp"
 #include "repositories/ProductBatchRepository.hpp"
+#include "repositories/ProductReservationRepository.hpp"
 #include "database/PreparedStatement.hpp"
 #include "database/Transaction.hpp"
 #include "models/Perishable.hpp"
 #include "models/NonPerishable.hpp"
 #include "models/Discount.hpp"
+#include "utils/Exceptions.hpp"
 #include "auth/AuthService.hpp"
 #include <cmath>
 #include <algorithm>
@@ -59,28 +61,34 @@ public:
         }
 
         if (!std::isfinite(dVal)) {
-            throw std::invalid_argument("Discount value must be finite");
+            throw InvalidDiscountException("Discount value must be finite");
         }
 
         std::string dTypeUpper = dType;
         for (char& c : dTypeUpper) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
 
-        if (dTypeUpper == "NONE") {
+        if (dTypeUpper == "NONE" || dTypeUpper.empty()) {
             return std::make_shared<NoDiscount>();
         } else if (dTypeUpper == "PERCENTAGE") {
-            if (dVal < 0.0 || dVal > 100.0) {
-                throw std::invalid_argument("Percentage discount must be between 0 and 100");
+            if (dVal < 0.0) {
+                throw InvalidDiscountException("Percentage discount cannot be negative");
+            }
+            if (dVal > 100.0) {
+                throw InvalidDiscountException("Percentage discount cannot exceed 100%");
             }
             return std::make_shared<PercentageDiscount>(dVal);
         } else if (dTypeUpper == "FIXED") {
-            if (dVal < 0.0 || dVal > 10000000.0) {
-                throw std::invalid_argument("Fixed discount is out of valid range");
+            if (dVal < 0.0) {
+                throw InvalidDiscountException("Fixed discount amount cannot be negative");
+            }
+            if (dVal > 10000000.0) {
+                throw InvalidDiscountException("Fixed discount is out of valid range");
             }
             int64_t fixedPaise = static_cast<int64_t>(std::round(dVal * 100.0));
             return std::make_shared<FixedAmountDiscount>(fixedPaise);
         }
 
-        throw std::invalid_argument("Invalid discountType. Expected NONE, PERCENTAGE, or FIXED");
+        throw InvalidDiscountException("Invalid discountType '" + dType + "'. Expected NONE, PERCENTAGE, or FIXED");
     }
 
     static int64_t extractPriceInPaise(const nlohmann::json& body, bool required, int64_t fallbackPaise) {
@@ -170,7 +178,7 @@ public:
         return isValidBarcodeOrCode(code);
     }
 
-    static nlohmann::json productToJson(const Product& p, DatabaseConnection& db) {
+    static nlohmann::json productToJson(const Product& p, DatabaseConnection& db, int reservedUnits = -1) {
         BrandRepository brandRepo(db);
         CategoryRepository catRepo(db);
 
@@ -273,6 +281,11 @@ public:
             }
         } catch (...) {}
 
+        int reservedUnitsCalculated = (reservedUnits >= 0)
+            ? reservedUnits
+            : ProductReservationRepository(db).getReservedStock(p.getId());
+        int availableUnits = (std::max)(0, p.getStock() - reservedUnitsCalculated);
+
         return nlohmann::json{
             {"id", p.getId()},
             {"sku", p.getSku()},
@@ -285,14 +298,17 @@ public:
             {"productType", (p.getType() == ProductType::PERISHABLE ? "PERISHABLE" : "NON_PERISHABLE")},
             {"priceInPaise", p.getPriceInPaise()},
             {"priceInRupees", p.getPrice()},
-            {"stock", p.getStock()},
+            {"stock", availableUnits},
+            {"availableStock", availableUnits},
+            {"reservedStock", reservedUnitsCalculated},
+            {"totalStock", p.getStock()},
             {"expiryDate", effectiveExpiry},
             {"nearestExpiryDate", effectiveExpiry},
             {"batches", batchArr},
             {"batchCount", batchArr.size()},
             {"hasExpiredBatches", hasExpired},
             {"expiredUnits", expiredUnits},
-            {"activeUnits", (batches.empty() ? p.getStock() : activeUnits)},
+            {"activeUnits", (batches.empty() ? availableUnits : (std::max)(0, activeUnits - reservedUnitsCalculated))},
             {"priceHistory", priceHistArr},
             {"discount", {
                 {"type", discType},
@@ -348,11 +364,16 @@ public:
                         try { offset = (std::max)(0, std::stoi(req.url_params.get("offset"))); } catch (...) {}
                     }
 
+                    ProductReservationRepository resRepo(db);
+                    auto allReserved = resRepo.getAllReservedStock();
+
                     nlohmann::json list = nlohmann::json::array();
                     int startIdx = (std::min)(offset, totalCount);
                     int endIdx = (std::min)(startIdx + limit, totalCount);
                     for (int i = startIdx; i < endIdx; ++i) {
-                        list.push_back(productToJson(*products[i], db));
+                        int pId = products[i]->getId();
+                        int rUnits = allReserved.count(pId) ? allReserved[pId] : 0;
+                        list.push_back(productToJson(*products[i], db, rUnits));
                     }
 
                     nlohmann::json result = {
@@ -461,13 +482,29 @@ public:
 
                         int stock = 0;
                         if (body.contains("stock")) {
-                            if (!ControllerUtils::parseStrictIntField(body, "stock", 0, 10000000, stock, fieldErr)) {
-                                return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                            if (!body["stock"].is_number_integer()) {
+                                return ControllerUtils::errorResponse(400, "Field 'stock' must be an integer", allowedOrigin);
                             }
+                            int64_t rawStock = body["stock"].get<int64_t>();
+                            if (rawStock < 0) {
+                                return ControllerUtils::errorResponse(400, "Stock quantity cannot be negative", allowedOrigin);
+                            }
+                            if (rawStock > 10000000) {
+                                return ControllerUtils::errorResponse(400, "Field 'stock' is out of allowed range", allowedOrigin);
+                            }
+                            stock = static_cast<int>(rawStock);
                         } else if (body.contains("quantity")) {
-                            if (!ControllerUtils::parseStrictIntField(body, "quantity", 0, 10000000, stock, fieldErr)) {
-                                return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                            if (!body["quantity"].is_number_integer()) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' must be an integer", allowedOrigin);
                             }
+                            int64_t rawStock = body["quantity"].get<int64_t>();
+                            if (rawStock < 0) {
+                                return ControllerUtils::errorResponse(400, "Stock quantity cannot be negative", allowedOrigin);
+                            }
+                            if (rawStock > 10000000) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' is out of allowed range", allowedOrigin);
+                            }
+                            stock = static_cast<int>(rawStock);
                         }
 
                         int64_t priceInPaise = 0;
@@ -567,6 +604,14 @@ public:
                         }
 
                         return ControllerUtils::successResponse(productToJson(**created, db), "Product created successfully", allowedOrigin, 201);
+                    } catch (const InvalidDiscountException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InvalidQuantityException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InsufficientStockException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const std::invalid_argument& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
                     } catch (const nlohmann::json::exception&) {
                         return ControllerUtils::errorResponse(400, "Malformed or invalid JSON request", allowedOrigin);
                     } catch (const std::exception& e) {
@@ -588,9 +633,17 @@ public:
                 ProductRepository repo(db);
                 auto summary = repo.getSummary();
 
+                ProductReservationRepository resRepo(db);
+                int totalReserved = 0;
+                for (const auto& pair : resRepo.getAllReservedStock()) {
+                    totalReserved += pair.second;
+                }
+
                 nlohmann::json data = {
                     {"totalActiveProducts", summary.totalActiveProducts},
                     {"totalStockUnits", summary.totalStockUnits},
+                    {"totalReservedUnits", totalReserved},
+                    {"totalAvailableUnits", (std::max)(0, summary.totalStockUnits - totalReserved)},
                     {"lowStockCount", summary.lowStockCount},
                     {"outOfStockCount", summary.outOfStockCount}
                 };
@@ -708,10 +761,30 @@ public:
                         }
 
                         int stock = p->getStock();
-                        if (body.contains("stock") && !ControllerUtils::parseStrictIntField(body, "stock", 0, 10000000, stock, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
-                        } else if (body.contains("quantity") && !ControllerUtils::parseStrictIntField(body, "quantity", 0, 10000000, stock, fieldErr)) {
-                            return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                        if (body.contains("stock")) {
+                            if (!body["stock"].is_number_integer()) {
+                                return ControllerUtils::errorResponse(400, "Field 'stock' must be an integer", allowedOrigin);
+                            }
+                            int64_t rawStock = body["stock"].get<int64_t>();
+                            if (rawStock < 0) {
+                                return ControllerUtils::errorResponse(400, "Stock quantity cannot be negative", allowedOrigin);
+                            }
+                            if (rawStock > 10000000) {
+                                return ControllerUtils::errorResponse(400, "Field 'stock' is out of allowed range", allowedOrigin);
+                            }
+                            stock = static_cast<int>(rawStock);
+                        } else if (body.contains("quantity")) {
+                            if (!body["quantity"].is_number_integer()) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' must be an integer", allowedOrigin);
+                            }
+                            int64_t rawStock = body["quantity"].get<int64_t>();
+                            if (rawStock < 0) {
+                                return ControllerUtils::errorResponse(400, "Stock quantity cannot be negative", allowedOrigin);
+                            }
+                            if (rawStock > 10000000) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' is out of allowed range", allowedOrigin);
+                            }
+                            stock = static_cast<int>(rawStock);
                         }
 
                         int64_t priceInPaise = p->getPriceInPaise();
@@ -853,6 +926,14 @@ public:
                         tx.commit();
                         auto saved = repo.findById(id);
                         return ControllerUtils::successResponse(productToJson(**saved, db), "Product updated successfully", allowedOrigin);
+                    } catch (const InvalidDiscountException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InvalidQuantityException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InsufficientStockException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const std::invalid_argument& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
                     } catch (const nlohmann::json::exception&) {
                         return ControllerUtils::errorResponse(400, "Malformed or invalid JSON request", allowedOrigin);
                     } catch (const std::exception& e) {
@@ -937,30 +1018,38 @@ public:
                         batchNumber = ControllerUtils::trimCopy(body["batchNumber"].get<std::string>());
                     }
 
-                    Transaction tx(db);
-                    int batchId = batchRepo.addBatch(id, batchNumber, quantity, expiryDate);
+                    try {
+                        Transaction tx(db);
+                        int batchId = batchRepo.addBatch(id, batchNumber, quantity, expiryDate);
 
-                    auto prod = *productOpt;
-                    int oldStock = prod->getStock();
-                    int newStock = oldStock + quantity;
-                    repo.updateStock(id, newStock);
+                        auto prod = *productOpt;
+                        int oldStock = prod->getStock();
+                        int newStock = oldStock + quantity;
+                        repo.updateStock(id, newStock);
 
-                    batchRepo.updateProductNearestExpiry(id);
+                        batchRepo.updateProductNearestExpiry(id);
 
-                    InventoryRepository invRepo(db);
-                    invRepo.recordMovement(id, MovementType::ADDITION, quantity, oldStock, newStock,
-                                           "New batch added: " + batchNumber + " (" + std::to_string(quantity) + " units, exp: " + expiryDate + ")");
+                        InventoryRepository invRepo(db);
+                        invRepo.recordMovement(id, MovementType::ADDITION, quantity, oldStock, newStock,
+                                               "New batch added: " + batchNumber + " (" + std::to_string(quantity) + " units, exp: " + expiryDate + ")");
 
-                    tx.commit();
+                        tx.commit();
 
-                    nlohmann::json data = {
-                        {"batchId", batchId},
-                        {"batchNumber", batchNumber},
-                        {"quantity", quantity},
-                        {"expiryDate", expiryDate},
-                        {"newTotalStock", newStock}
-                    };
-                    return ControllerUtils::successResponse(data, "Batch added successfully", allowedOrigin, 201);
+                        nlohmann::json data = {
+                            {"batchId", batchId},
+                            {"batchNumber", batchNumber},
+                            {"quantity", quantity},
+                            {"expiryDate", expiryDate},
+                            {"newTotalStock", newStock}
+                        };
+                        return ControllerUtils::successResponse(data, "Batch added successfully", allowedOrigin, 201);
+                    } catch (const InvalidQuantityException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const std::invalid_argument& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const std::exception& e) {
+                        return ControllerUtils::errorResponse(500, "Error adding batch: " + std::string(e.what()), allowedOrigin);
+                    }
                 }
 
                 return ControllerUtils::errorResponse(405, "Method Not Allowed", allowedOrigin);

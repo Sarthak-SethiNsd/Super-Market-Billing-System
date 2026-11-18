@@ -253,6 +253,56 @@ int main() {
                 };
                 auto resUpdate = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), updateProd.dump(), adminToken);
                 TEST_ASSERT(resUpdate.code == 200);
+
+                // Boundary exception checks: Invalid discount configurations rejected with HTTP 400
+                {
+                    // 1. Negative percentage discount
+                    nlohmann::json badPercNeg = updateProd;
+                    badPercNeg["discountValue"] = -15.0;
+                    auto resBad1 = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), badPercNeg.dump(), adminToken);
+                    TEST_ASSERT(resBad1.code == 400);
+                    auto jBad1 = nlohmann::json::parse(resBad1.body);
+                    TEST_ASSERT(jBad1["success"] == false);
+                    TEST_ASSERT(jBad1["error"].get<std::string>().find("Percentage discount cannot be negative") != std::string::npos);
+
+                    // 2. Percentage discount > 100%
+                    nlohmann::json badPercOver = updateProd;
+                    badPercOver["discountValue"] = 150.0;
+                    auto resBad2 = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), badPercOver.dump(), adminToken);
+                    TEST_ASSERT(resBad2.code == 400);
+                    auto jBad2 = nlohmann::json::parse(resBad2.body);
+                    TEST_ASSERT(jBad2["success"] == false);
+                    TEST_ASSERT(jBad2["error"].get<std::string>().find("Percentage discount cannot exceed 100%") != std::string::npos);
+
+                    // 3. Negative fixed discount
+                    nlohmann::json badFixedNeg = updateProd;
+                    badFixedNeg["discountType"] = "FIXED";
+                    badFixedNeg["discountValue"] = -50.0;
+                    auto resBad3 = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), badFixedNeg.dump(), adminToken);
+                    TEST_ASSERT(resBad3.code == 400);
+                    auto jBad3 = nlohmann::json::parse(resBad3.body);
+                    TEST_ASSERT(jBad3["success"] == false);
+                    TEST_ASSERT(jBad3["error"].get<std::string>().find("Fixed discount amount cannot be negative") != std::string::npos);
+
+                    // 4. Invalid discount type string
+                    nlohmann::json badType = updateProd;
+                    badType["discountType"] = "INVALID_BONUS_TYPE";
+                    badType["discountValue"] = 20.0;
+                    auto resBad4 = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), badType.dump(), adminToken);
+                    TEST_ASSERT(resBad4.code == 400);
+                    auto jBad4 = nlohmann::json::parse(resBad4.body);
+                    TEST_ASSERT(jBad4["success"] == false);
+                    TEST_ASSERT(jBad4["error"].get<std::string>().find("Expected NONE, PERCENTAGE, or FIXED") != std::string::npos);
+
+                    // 5. Negative stock update rejected with HTTP 400
+                    nlohmann::json badStock = updateProd;
+                    badStock["stock"] = -25;
+                    auto resBad5 = makeRequest(server, "PUT", "/api/products/" + std::to_string(prodId), badStock.dump(), adminToken);
+                    TEST_ASSERT(resBad5.code == 400);
+                    auto jBad5 = nlohmann::json::parse(resBad5.body);
+                    TEST_ASSERT(jBad5["success"] == false);
+                    TEST_ASSERT(jBad5["error"].get<std::string>().find("Stock quantity cannot be negative") != std::string::npos);
+                }
                 auto jUpdated = nlohmann::json::parse(resUpdate.body);
                 TEST_ASSERT(jUpdated["data"]["name"] == "Organic Royal White Quinoa 1kg");
 
@@ -312,7 +362,37 @@ int main() {
                 auto jProdCheck = nlohmann::json::parse(resProdCheck.body);
                 TEST_ASSERT(jProdCheck["data"]["stock"] == 66);
 
-                // Attempt to checkout with excess stock -> should fail (409 Conflict)
+                // Attempt to checkout with negative quantity -> should fail with HTTP 400
+                nlohmann::json negCheckout = {
+                    {"items", {
+                        {
+                            {"productId", prodId},
+                            {"quantity", -5}
+                        }
+                    }}
+                };
+                auto resNeg = makeRequest(server, "POST", "/api/bills", negCheckout.dump());
+                TEST_ASSERT(resNeg.code == 400);
+                auto jNeg = nlohmann::json::parse(resNeg.body);
+                TEST_ASSERT(jNeg["success"] == false);
+                TEST_ASSERT(jNeg["error"] == "Invalid quantity: must be positive");
+
+                // Attempt to checkout with zero quantity -> should fail with HTTP 400
+                nlohmann::json zeroCheckout = {
+                    {"items", {
+                        {
+                            {"productId", prodId},
+                            {"quantity", 0}
+                        }
+                    }}
+                };
+                auto resZero = makeRequest(server, "POST", "/api/bills", zeroCheckout.dump());
+                TEST_ASSERT(resZero.code == 400);
+                auto jZero = nlohmann::json::parse(resZero.body);
+                TEST_ASSERT(jZero["success"] == false);
+                TEST_ASSERT(jZero["error"] == "Invalid quantity: must be positive");
+
+                // Attempt to checkout with excess stock -> should fail (HTTP 400/409 InsufficientStockException)
                 nlohmann::json excessCheckout = {
                     {"items", {
                         {
@@ -323,6 +403,9 @@ int main() {
                 };
                 auto resExcess = makeRequest(server, "POST", "/api/bills", excessCheckout.dump());
                 TEST_ASSERT(resExcess.code == 400 || resExcess.code == 409);
+                auto jExcess = nlohmann::json::parse(resExcess.body);
+                TEST_ASSERT(jExcess["success"] == false);
+                TEST_ASSERT(jExcess["error"].get<std::string>().find("Requested quantity 999 exceeds available stock 66") != std::string::npos);
 
                 // Stock should still be 66 (atomicity/rollback preserved)
                 auto resRollbackCheck = makeRequest(server, "GET", "/api/products/" + std::to_string(prodId));
@@ -557,12 +640,129 @@ int main() {
 
                 std::cout << "  -> PASSED (Windows CNG & OpenSSL PBKDF2-HMAC-SHA256 vectors match)\n";
             }
+
+            // 13. Multi-Session Cart Reservation & Reserved Stock Isolation
+            std::cout << "[RUNNING] 13. Multi-Session Cart Reservation & Reserved Stock Isolation...\n";
+            {
+                // Re-authenticate admin to obtain a fresh active token
+                auto resLogin13 = makeRequest(server, "POST", "/api/auth/admin/unlock", "{\"password\":\"SuperSecret123!\"}");
+                TEST_ASSERT(resLogin13.code == 200);
+                std::string cartAdminToken = nlohmann::json::parse(resLogin13.body)["data"]["token"].get<std::string>();
+
+                // Create a product for reservation test
+                nlohmann::json resProdReq = {
+                    {"sku", "004"},
+                    {"name", "Reserved Stock Test Cereal 500g"},
+                    {"brandId", brandId},
+                    {"categoryId", catId},
+                    {"productType", "NON_PERISHABLE"},
+                    {"priceInRupees", 120.00},
+                    {"stock", 15},
+                    {"discountType", "NONE"},
+                    {"discountValue", 0.0}
+                };
+                auto resProdCreated = makeRequest(server, "POST", "/api/products", resProdReq.dump(), cartAdminToken);
+                if (resProdCreated.code != 201) {
+                    std::cerr << "resProdCreated failed with code: " << resProdCreated.code << " body: " << resProdCreated.body << "\n";
+                }
+                TEST_ASSERT(resProdCreated.code == 201);
+                int rProdId = nlohmann::json::parse(resProdCreated.body)["data"]["id"].get<int>();
+
+                // 1. Session 1 reserves 5 units
+                nlohmann::json reserveReq1 = {
+                    {"sessionId", "session_user_1"},
+                    {"productId", rProdId},
+                    {"quantity", 5}
+                };
+                auto resReserve1 = makeRequest(server, "POST", "/api/cart/reserve", reserveReq1.dump());
+                TEST_ASSERT(resReserve1.code == 200);
+                auto jReserve1 = nlohmann::json::parse(resReserve1.body)["data"];
+                TEST_ASSERT(jReserve1["reservedStock"] == 5);
+                TEST_ASSERT(jReserve1["availableStock"] == 10);
+                TEST_ASSERT(jReserve1["totalStock"] == 15);
+
+                // 2. GET /api/products returns reduced available stock (10) to another user
+                auto resGetProducts = makeRequest(server, "GET", "/api/products?q=004");
+                TEST_ASSERT(resGetProducts.code == 200);
+                auto jProds = nlohmann::json::parse(resGetProducts.body)["data"]["products"];
+                TEST_ASSERT(jProds.size() == 1);
+                TEST_ASSERT(jProds[0]["stock"] == 10);
+                TEST_ASSERT(jProds[0]["availableStock"] == 10);
+                TEST_ASSERT(jProds[0]["reservedStock"] == 5);
+                TEST_ASSERT(jProds[0]["totalStock"] == 15);
+
+                // 3. Session 2 tries to reserve 12 units (more than 10 available) -> 409 Conflict
+                nlohmann::json reserveReq2Fail = {
+                    {"sessionId", "session_user_2"},
+                    {"productId", rProdId},
+                    {"quantity", 12}
+                };
+                auto resReserve2Fail = makeRequest(server, "POST", "/api/cart/reserve", reserveReq2Fail.dump());
+                TEST_ASSERT(resReserve2Fail.code == 409);
+
+                // 4. Session 2 reserves 8 units (feasible) -> 200 OK
+                nlohmann::json reserveReq2 = {
+                    {"sessionId", "session_user_2"},
+                    {"productId", rProdId},
+                    {"quantity", 8}
+                };
+                auto resReserve2 = makeRequest(server, "POST", "/api/cart/reserve", reserveReq2.dump());
+                TEST_ASSERT(resReserve2.code == 200);
+
+                // GET /api/products now reflects 2 units remaining
+                auto resGetProducts2 = makeRequest(server, "GET", "/api/products?q=004");
+                auto jProds2 = nlohmann::json::parse(resGetProducts2.body)["data"]["products"];
+                TEST_ASSERT(jProds2[0]["stock"] == 2);
+                TEST_ASSERT(jProds2[0]["reservedStock"] == 13);
+                TEST_ASSERT(jProds2[0]["totalStock"] == 15);
+
+                // 5. Query active cart for Session 1
+                auto resCart1 = makeRequest(server, "GET", "/api/cart?sessionId=session_user_1");
+                TEST_ASSERT(resCart1.code == 200);
+                auto jCart1 = nlohmann::json::parse(resCart1.body)["data"];
+                TEST_ASSERT(jCart1["totalReservedUnits"] == 5);
+                TEST_ASSERT(jCart1["itemCount"] == 1);
+
+                // 6. Session 1 completes checkout with sessionId
+                nlohmann::json checkoutReq = {
+                    {"sessionId", "session_user_1"},
+                    {"items", nlohmann::json::array({{{"productId", rProdId}, {"quantity", 5}}})},
+                    {"customerName", "Cart Reservation Customer"}
+                };
+                auto resCheckout = makeRequest(server, "POST", "/api/bills", checkoutReq.dump());
+                TEST_ASSERT(resCheckout.code == 201);
+
+                // Session 1's cart is now empty
+                auto resCart1After = makeRequest(server, "GET", "/api/cart?sessionId=session_user_1");
+                TEST_ASSERT(nlohmann::json::parse(resCart1After.body)["data"]["totalReservedUnits"] == 0);
+
+                // Physical stock was decremented from 15 to 10; Session 2 still holds 8; available is 2
+                auto resGetProducts3 = makeRequest(server, "GET", "/api/products?q=004");
+                auto jProds3 = nlohmann::json::parse(resGetProducts3.body)["data"]["products"];
+                TEST_ASSERT(jProds3[0]["stock"] == 2);
+                TEST_ASSERT(jProds3[0]["reservedStock"] == 8);
+                TEST_ASSERT(jProds3[0]["totalStock"] == 10);
+
+                // 7. Session 2 clears cart
+                nlohmann::json clearReq = {{"sessionId", "session_user_2"}};
+                auto resClear = makeRequest(server, "POST", "/api/cart/clear", clearReq.dump());
+                TEST_ASSERT(resClear.code == 200);
+
+                // Available stock now returns to full physical stock (10)
+                auto resGetProductsFinal = makeRequest(server, "GET", "/api/products?q=004");
+                auto jProdsFinal = nlohmann::json::parse(resGetProductsFinal.body)["data"]["products"];
+                TEST_ASSERT(jProdsFinal[0]["stock"] == 10);
+                TEST_ASSERT(jProdsFinal[0]["reservedStock"] == 0);
+                TEST_ASSERT(jProdsFinal[0]["totalStock"] == 10);
+
+                std::cout << "  -> PASSED (Multi-session reservation, available stock reflection, and checkout clearing verified)\n";
+            }
         } // server destructs cleanly here, releasing all SQLite file locks
 
         cleanApiTestDb();
 
         std::cout << "=====================================================\n";
-        std::cout << "        ALL 12 API & AUTH TEST SUITES PASSED!        \n";
+        std::cout << "        ALL 13 API & AUTH TEST SUITES PASSED!        \n";
         std::cout << "=====================================================\n";
         return 0;
     } catch (const std::exception& e) {

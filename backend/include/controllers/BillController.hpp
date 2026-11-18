@@ -2,7 +2,9 @@
 #include "controllers/ControllerUtils.hpp"
 #include "repositories/BillRepository.hpp"
 #include "repositories/ProductRepository.hpp"
+#include "repositories/ProductReservationRepository.hpp"
 #include "models/Bill.hpp"
+#include "utils/Exceptions.hpp"
 #include <chrono>
 #include <sstream>
 #include <iomanip>
@@ -170,13 +172,19 @@ public:
                                 return ControllerUtils::errorResponse(400, "Each item must be an object with 'productId' and 'quantity'", allowedOrigin);
                             }
                             int prodIdTmp = 0;
-                            int qtyTmp = 0;
                             std::string fieldErr;
                             if (!ControllerUtils::parseStrictIntField(it, "productId", 1, 1000000000, prodIdTmp, fieldErr)) {
                                 return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
                             }
-                            if (!ControllerUtils::parseStrictIntField(it, "quantity", 1, 100000, qtyTmp, fieldErr)) {
-                                return ControllerUtils::errorResponse(400, fieldErr, allowedOrigin);
+                            if (!it["quantity"].is_number_integer()) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' must be an integer", allowedOrigin);
+                            }
+                            int qtyTmp = it["quantity"].get<int>();
+                            if (qtyTmp <= 0) {
+                                return ControllerUtils::errorResponse(400, "Invalid quantity: must be positive", allowedOrigin);
+                            }
+                            if (qtyTmp > 100000) {
+                                return ControllerUtils::errorResponse(400, "Field 'quantity' is out of allowed range", allowedOrigin);
                             }
                         }
 
@@ -197,6 +205,10 @@ public:
                             int prodId = it["productId"].get<int>();
                             int quantity = it["quantity"].get<int>();
 
+                            if (quantity <= 0) {
+                                throw InvalidQuantityException("Invalid quantity: must be positive");
+                            }
+
                             auto prodOpt = prodRepo.findById(prodId);
                             if (!prodOpt.has_value()) {
                                 return ControllerUtils::errorResponse(404, "Product with ID " + std::to_string(prodId) + " not found", allowedOrigin);
@@ -208,13 +220,7 @@ public:
                             cumulativeQty[prodId] += quantity;
                             auto product = *prodOpt;
                             if (product->getStock() < cumulativeQty[prodId]) {
-                                return ControllerUtils::errorResponse(
-                                    409,
-                                    "Insufficient stock for '" + product->getName() +
-                                    "'. Available: " + std::to_string(product->getStock()) +
-                                    ", Requested: " + std::to_string(cumulativeQty[prodId]),
-                                    allowedOrigin
-                                );
+                                throw InsufficientStockException(cumulativeQty[prodId], product->getStock(), product->getName());
                             }
 
                             // Add to domain bill applying its configured discount strategy
@@ -245,8 +251,19 @@ public:
                             }
                         }
 
+                        std::string sessionId;
+                        if (body.contains("sessionId") && !body["sessionId"].is_null() && body["sessionId"].is_string()) {
+                            sessionId = ControllerUtils::trimCopy(body["sessionId"].get<std::string>());
+                        }
+
                         // Save Bill atomically to SQLite with stock deduction & snapshots
                         int newBillId = billRepo.saveBill(billNumber, domainBill, customerId, customerName, customerPhone);
+
+                        // Clear cart reservations for this checkout session if provided
+                        if (!sessionId.empty()) {
+                            ProductReservationRepository resRepo(db);
+                            resRepo.clearSession(sessionId);
+                        }
 
                         auto createdRecord = billRepo.findById(newBillId);
                         if (!createdRecord.has_value()) {
@@ -254,10 +271,16 @@ public:
                         }
 
                         return ControllerUtils::successResponse(billToJson(*createdRecord), "Invoice created successfully", allowedOrigin, 201);
+                    } catch (const InsufficientStockException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InvalidQuantityException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
+                    } catch (const InvalidDiscountException& e) {
+                        return ControllerUtils::errorResponse(400, e.what(), allowedOrigin);
                     } catch (const nlohmann::json::exception&) {
                         return ControllerUtils::errorResponse(400, "Malformed or invalid JSON request", allowedOrigin);
                     } catch (const std::exception& e) {
-                        return ControllerUtils::errorResponse(409, "Transaction rejected: " + std::string(e.what()), allowedOrigin);
+                        return ControllerUtils::errorResponse(400, "Transaction rejected: " + std::string(e.what()), allowedOrigin);
                     }
                 }
 

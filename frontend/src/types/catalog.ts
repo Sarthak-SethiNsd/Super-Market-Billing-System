@@ -35,6 +35,9 @@ export interface Product {
   priceInPaise: number;
   priceInRupees: number;
   stock: number;
+  availableStock?: number;
+  reservedStock?: number;
+  totalStock?: number;
   expiryDate?: string;
   discount?: DiscountInfo;
 }
@@ -55,6 +58,9 @@ export interface ProductFormData {
   productType: ProductType;
   priceInRupees: number;
   stock: number;
+  availableStock?: number;
+  reservedStock?: number;
+  totalStock?: number;
   expiryDate?: string;
   discountType: DiscountType;
   discountValue: number;

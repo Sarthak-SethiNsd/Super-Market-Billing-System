@@ -24,6 +24,7 @@ import { productService } from '@/services/productService';
 import { categoryService } from '@/services/categoryService';
 import { billService } from '@/services/billService';
 import { customerService } from '@/services/customerService';
+import { cartService } from '@/services/cartService';
 import { InvoiceReceiptModal } from '@/components/billing/InvoiceReceiptModal';
 import { Users, UserPlus, X, Filter } from 'lucide-react';
 
@@ -130,33 +131,33 @@ export const BillingPage: React.FC = () => {
     }
   };
 
-  const addToCart = (product: Product) => {
+  const addToCart = async (product: Product) => {
     if (product.stock <= 0) return;
 
-    setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex((item) => item.product.id === product.id);
+    const existingIndex = cart.findIndex((item) => item.product.id === product.id);
+    const currentQty = existingIndex > -1 ? cart[existingIndex].quantity : 0;
+    const targetQty = currentQty + 1;
+
+    try {
+      await cartService.reserve(product.id, targetQty);
+      setCheckoutError(null);
+
       const hasDiscount = product.discount && product.discount.type !== 'NONE';
       const discountedPrice = hasDiscount
         ? product.discount!.discountedPriceInRupees
         : product.priceInRupees;
 
       if (existingIndex > -1) {
-        const currentItem = prevCart[existingIndex];
-        if (currentItem.quantity >= product.stock) {
-          setCheckoutError(`Cannot add more than ${product.stock} units of ${product.name}.`);
-          return prevCart;
-        }
-        const updated = [...prevCart];
-        const newQty = currentItem.quantity + 1;
+        const updated = [...cart];
         updated[existingIndex] = {
-          ...currentItem,
-          quantity: newQty,
-          lineTotalInRupees: newQty * discountedPrice,
+          ...cart[existingIndex],
+          quantity: targetQty,
+          lineTotalInRupees: targetQty * discountedPrice,
         };
-        return updated;
+        setCart(updated);
       } else {
-        return [
-          ...prevCart,
+        setCart([
+          ...cart,
           {
             product,
             quantity: 1,
@@ -164,22 +165,27 @@ export const BillingPage: React.FC = () => {
             discountedUnitPriceInRupees: discountedPrice,
             lineTotalInRupees: discountedPrice,
           },
-        ];
+        ]);
       }
-    });
+      fetchProducts();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Failed to reserve stock';
+      setCheckoutError(msg);
+    }
   };
 
-  const updateQuantity = (productId: number, delta: number) => {
-    setCart((prevCart) =>
-      prevCart
-        .map((item) => {
+  const setQuantity = async (productId: number, newQty: number) => {
+    if (isNaN(newQty) || newQty <= 0) {
+      setCheckoutError('Invalid quantity: must be positive');
+      return;
+    }
+
+    try {
+      await cartService.reserve(productId, newQty);
+      setCheckoutError(null);
+      setCart((prevCart) =>
+        prevCart.map((item) => {
           if (item.product.id === productId) {
-            const newQty = item.quantity + delta;
-            if (newQty <= 0) return null;
-            if (newQty > item.product.stock) {
-              setCheckoutError(`Available stock for ${item.product.name} is ${item.product.stock}.`);
-              return item;
-            }
             return {
               ...item,
               quantity: newQty,
@@ -188,17 +194,60 @@ export const BillingPage: React.FC = () => {
           }
           return item;
         })
-        .filter((item): item is CartItem => item !== null)
-    );
+      );
+      fetchProducts();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Failed to update reserved quantity';
+      setCheckoutError(msg);
+    }
   };
 
-  const removeFromCart = (productId: number) => {
+  const updateQuantity = async (productId: number, delta: number) => {
+    const item = cart.find((i) => i.product.id === productId);
+    if (!item) return;
+    const targetQty = item.quantity + delta;
+    if (targetQty <= 0) {
+      await removeFromCart(productId);
+      return;
+    }
+
+    try {
+      await cartService.reserve(productId, targetQty);
+      setCheckoutError(null);
+      setCart((prevCart) =>
+        prevCart.map((it) => {
+          if (it.product.id === productId) {
+            return {
+              ...it,
+              quantity: targetQty,
+              lineTotalInRupees: targetQty * it.discountedUnitPriceInRupees,
+            };
+          }
+          return it;
+        })
+      );
+      fetchProducts();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Failed to update quantity';
+      setCheckoutError(msg);
+    }
+  };
+
+  const removeFromCart = async (productId: number) => {
+    try {
+      await cartService.release(productId);
+    } catch (_) {}
     setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId));
+    fetchProducts();
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
+    try {
+      await cartService.clear();
+    } catch (_) {}
     setCart([]);
     setCheckoutError(null);
+    fetchProducts();
   };
 
   // Cart summary calculations
@@ -229,6 +278,7 @@ export const BillingPage: React.FC = () => {
         customerId: selectedCust?.id || null,
         customerName: finalCustomerName,
         customerPhone: selectedCust?.phone || null,
+        sessionId: cartService.getSessionId(),
       };
 
       const invoice = await billService.checkout(items, undefined, customerDetails);
@@ -242,7 +292,7 @@ export const BillingPage: React.FC = () => {
       if (err instanceof Error) {
         setCheckoutError(err.message);
       } else {
-        setCheckoutError('Checkout failed. Transaction was rolled back.');
+        setCheckoutError('Purchase confirmation failed. Transaction was rolled back.');
       }
     } finally {
       setIsCheckingOut(false);
@@ -291,10 +341,10 @@ export const BillingPage: React.FC = () => {
         <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold text-[#303631] tracking-tight flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-[#285943] shrink-0" />
-            <span>Billing &amp; Checkout Terminal</span>
+            <span>Billing &amp; Purchase Terminal</span>
           </h2>
           <p className="text-xs text-[#777D76] mt-0.5">
-            Rapid barcode discovery and transactional checkout via C++ ACID persistence.
+            Rapid barcode discovery and purchase approval via C++ ACID persistence.
           </p>
         </div>
 
@@ -447,17 +497,27 @@ export const BillingPage: React.FC = () => {
                           <h4 className="font-bold text-[#303631] text-xs sm:text-sm line-clamp-2 group-hover:text-[#285943] transition-colors leading-snug">
                             {p.name}
                           </h4>
-                          <span
-                            className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded shrink-0 ${
-                              isOutOfStock
-                                ? 'bg-rose-100 text-rose-700'
-                                : p.stock <= 5
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-50 text-emerald-700'
-                            }`}
-                          >
-                            {isOutOfStock ? 'Out of stock' : `${p.stock} left`}
-                          </span>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0">
+                            <span
+                              className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
+                                isOutOfStock
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : p.stock <= 5
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-50 text-emerald-700'
+                              }`}
+                            >
+                              {isOutOfStock ? 'Out of stock' : `${p.stock} left`}
+                            </span>
+                            {p.reservedStock && p.reservedStock > 0 ? (
+                              <span
+                                className="text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1 py-0.2 rounded"
+                                title={`${p.reservedStock} held in other active carts`}
+                              >
+                                {p.reservedStock} reserved
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
 
                         {/* Secondary Brand & Category Information */}
@@ -684,9 +744,20 @@ export const BillingPage: React.FC = () => {
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="px-2.5 py-0.5 text-xs font-mono font-bold text-[#303631]">
-                            {item.quantity}
-                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={item.product.stock}
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val)) {
+                                setQuantity(item.product.id, val);
+                              }
+                            }}
+                            className="w-12 text-center py-0.5 text-xs font-mono font-bold text-[#303631] border-x border-[#E5E4DC] focus:outline-none focus:bg-[#FAF9F5] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            title="Direct quantity edit"
+                          />
                           <button
                             onClick={() => updateQuantity(item.product.id, 1)}
                             className="p-1 hover:bg-[#FAF9F5] text-[#303631] transition-colors disabled:opacity-30"
@@ -725,7 +796,7 @@ export const BillingPage: React.FC = () => {
                   </div>
                 )}
                 <div className="flex justify-between text-base font-bold text-[#303631] pt-2 border-t border-[#E5E4DC] font-sans">
-                  <span>Payable Total:</span>
+                  <span>Total Purchase Amount:</span>
                   <span className="font-mono text-[#285943]">₹{finalTotal.toFixed(2)}</span>
                 </div>
               </div>
@@ -739,11 +810,11 @@ export const BillingPage: React.FC = () => {
                 className="w-full bg-[#285943] hover:bg-[#1e4433] text-white font-bold py-2.5 text-sm gap-2 shadow-xs"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                Complete Transaction (POST /api/bills)
+                Approve &amp; Confirm Purchase
               </Button>
 
               <p className="text-[10px] text-center text-[#777D76]">
-                Processed atomically by C++ SQLite Transaction Guard.
+                Purchase is approved and recorded atomically by C++ SQLite Transaction Guard.
               </p>
             </CardFooter>
           </Card>

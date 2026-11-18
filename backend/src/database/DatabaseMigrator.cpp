@@ -306,4 +306,31 @@ void DatabaseMigrator::migrate(DatabaseConnection& conn) {
         setVersion(conn, 5);
         currentVersion = 5;
     }
+
+    if (currentVersion < 6) {
+        Transaction tx(conn);
+
+        // 15. Product Reservations Table (Reserved Cart Stock with TTL)
+        conn.execute(R"(
+            CREATE TABLE IF NOT EXISTS product_reservations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                product_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL CHECK (quantity > 0),
+                expires_at INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                UNIQUE(session_id, product_id)
+            );
+        )");
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_reservations_session ON product_reservations(session_id);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_reservations_product ON product_reservations(product_id);");
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_reservations_expires ON product_reservations(expires_at);");
+
+        tx.commit();
+        setVersion(conn, 6);
+        currentVersion = 6;
+    }
 }

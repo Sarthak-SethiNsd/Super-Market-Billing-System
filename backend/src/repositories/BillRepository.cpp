@@ -3,6 +3,7 @@
 #include "database/DatabaseConnection.hpp"
 #include "database/PreparedStatement.hpp"
 #include "database/Transaction.hpp"
+#include "utils/Exceptions.hpp"
 #include <stdexcept>
 #include <unordered_map>
 
@@ -119,6 +120,10 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
 
     // 4. Insert bill items and deduct stock
     for (const auto& item : bill.getItems()) {
+        if (item.getQuantity() <= 0) {
+            throw InvalidQuantityException("Invalid quantity: must be positive");
+        }
+
         std::string brandName = "Standard";
         int currentStock = 0;
 
@@ -135,6 +140,10 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
                     brandName = brandStmt.getString(0);
                 }
                 currentStock = brandStmt.getInt(1);
+            }
+
+            if (currentStock < item.getQuantity()) {
+                throw InsufficientStockException(item.getQuantity(), currentStock, item.getName());
             }
         }
 
@@ -175,7 +184,7 @@ int BillRepository::saveBill(const std::string& billNumber, const Bill& bill, st
             updateStockStmt.bind(3, item.getQuantity());
             updateStockStmt.execute();
             if (db.getChanges() == 0) {
-                throw std::runtime_error("Concurrent stock conflict for product ID: " + std::to_string(item.getProductId()));
+                throw InsufficientStockException(item.getQuantity(), currentStock, item.getName());
             }
 
             // Deduct from batches using FEFO and update product's nearest expiry date

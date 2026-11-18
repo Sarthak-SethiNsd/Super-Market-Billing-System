@@ -31,8 +31,8 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
               <CheckCircle2 className="w-5 h-5 text-[#71836A]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm">Transaction Successful</h3>
-              <p className="text-xs text-[#d6e2dc]">Stock deducted atomically by C++ engine</p>
+              <h3 className="font-bold text-sm">Purchase Approved &amp; Recorded</h3>
+              <p className="text-xs text-[#d6e2dc]">Stock deducted and purchase recorded atomically by C++ engine</p>
             </div>
           </div>
           <button
@@ -53,7 +53,7 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
               <Store className="w-5 h-5 text-[#285943]" />
               Supermart
             </div>
-            <p className="text-xs text-[#777D76]">Supermarket Billing &amp; Inventory Management</p>
+            <p className="text-xs text-[#777D76]">Purchase Confirmation / Invoice</p>
             <div className="pt-2 flex items-center justify-between text-xs text-[#777D76] font-mono">
               <span>Invoice: <strong className="text-[#303631]">{invoice.billNumber}</strong></span>
               <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>
@@ -111,13 +111,13 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
               </div>
             )}
             <div className="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2 font-sans">
-              <span>Grand Total Paid:</span>
+              <span>Purchase Grand Total:</span>
               <span className="font-mono text-emerald-700">₹{invoice.finalAmountInRupees.toFixed(2)}</span>
             </div>
           </div>
 
           <div className="text-center text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-            Thank you for shopping with us! Historical snapshot saved to SQLite.
+            Purchase Approved &amp; Recorded. Historical snapshot saved to SQLite.
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export const InvoiceReceiptModal: React.FC<InvoiceReceiptModalProps> = ({ invoic
             onClick={onClose}
             className="bg-[#285943] hover:bg-[#1e4433] text-white"
           >
-            Done / Next Customer
+            Done / Next Purchase
           </Button>
         </div>
       </div>

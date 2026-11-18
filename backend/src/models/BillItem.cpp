@@ -1,4 +1,5 @@
 #include "models/BillItem.hpp"
+#include "utils/Exceptions.hpp"
 #include <iomanip>
 #include <cmath>
 #include <stdexcept>
@@ -15,10 +16,13 @@ BillItem::BillItem(int prodId,
       finalUnitPriceInPaise(std::max(INT64_C(0), originalUnitPriceInPaise - discountPerUnitInPaise)),
       quantity(qty) {
     if (qty <= 0) {
-        throw std::invalid_argument("Bill item quantity must be positive");
+        throw InvalidQuantityException("Bill item quantity must be positive");
     }
     if (originalUnitPriceInPaise < 0) {
         throw std::invalid_argument("Unit price cannot be negative");
+    }
+    if (discountPerUnitInPaise < 0) {
+        throw InvalidDiscountException("Discount per unit cannot be negative");
     }
 }
 
@@ -30,7 +34,7 @@ BillItem::BillItem(const std::string& n, double p, int q)
       finalUnitPriceInPaise(static_cast<int64_t>(std::round(p * 100.0))),
       quantity(q) {
     if (q <= 0) {
-        throw std::invalid_argument("Quantity must be positive");
+        throw InvalidQuantityException("Quantity must be positive");
     }
     if (p < 0.0) {
         throw std::invalid_argument("Price cannot be negative");

@@ -99,7 +99,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
                   <Store className="w-5 h-5 text-emerald-600" />
                   Supermart
                 </div>
-                <p className="text-xs text-slate-500">Supermarket Billing &amp; Inventory Management</p>
+                <p className="text-xs text-slate-500">Purchase Confirmation / Invoice</p>
                 <div className="pt-3 flex items-center justify-between text-xs text-slate-600 font-mono">
                   <span>Invoice: <strong className="text-slate-900">{invoice.billNumber}</strong></span>
                   <span>{new Date(invoice.createdAt || Date.now()).toLocaleString()}</span>
@@ -162,7 +162,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({ billId, 
                   </div>
                 )}
                 <div className="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2 font-sans">
-                  <span>Net Payable Amount:</span>
+                  <span>Purchase Grand Total:</span>
                   <span className="font-mono text-emerald-700">₹{invoice.finalAmountInRupees.toFixed(2)}</span>
                 </div>
               </div>

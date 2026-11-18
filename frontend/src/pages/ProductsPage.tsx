@@ -342,17 +342,24 @@ export const ProductsPage: React.FC = () => {
 
                       {/* Stock Level */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded font-mono font-semibold text-xs ${
-                            isOutOfStock
-                              ? 'bg-rose-100 text-rose-800'
-                              : isLowStock
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-emerald-50 text-emerald-700'
-                          }`}
-                        >
-                          {isOutOfStock ? '0 (Out)' : `${p.stock} units`}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span
+                            className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded font-mono font-semibold text-xs ${
+                              isOutOfStock
+                                ? 'bg-rose-100 text-rose-800'
+                                : isLowStock
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-emerald-50 text-emerald-700'
+                            }`}
+                          >
+                            {isOutOfStock ? '0 (Out)' : `${p.stock} units`}
+                          </span>
+                          {p.reservedStock && p.reservedStock > 0 ? (
+                            <span className="text-[10px] text-amber-700 font-mono mt-0.5">
+                              ({p.reservedStock} reserved)
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       {/* Staff Actions */}

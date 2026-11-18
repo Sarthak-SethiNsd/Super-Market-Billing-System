@@ -73,7 +73,7 @@ export const AdminPage: React.FC = () => {
       path: '/transactions',
       icon: Receipt,
       badge: 'Invoice Records',
-      desc: 'Immutable historical sales invoices, price snapshots, payment verification, and thermal receipt reprints.',
+      desc: 'Immutable historical sales invoices, price snapshots, purchase confirmation records, and receipt reprints.',
     },
   ];
 

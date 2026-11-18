@@ -437,7 +437,7 @@ export const DashboardPage: React.FC = () => {
               <div className="h-44 sm:h-56 flex flex-col items-center justify-center text-center p-4">
                 <TrendingUp className="w-8 h-8 text-[#71836A]/40 mb-1.5" />
                 <p className="text-xs font-semibold text-[#303631]">No sales in selected period</p>
-                <p className="text-[11px] text-[#777D76] mt-0.5">Checkout orders will dynamically populate this chart.</p>
+                <p className="text-[11px] text-[#777D76] mt-0.5">Recorded purchases will dynamically populate this chart.</p>
               </div>
             ) : (
               <div className="h-44 sm:h-56 w-full min-w-0 overflow-hidden">
@@ -500,7 +500,7 @@ export const DashboardPage: React.FC = () => {
                   <Receipt className="w-4 h-4 text-[#285943]" />
                   Recent Transactions
                 </CardTitle>
-                <CardDescription className="text-xs">Latest customer checkouts</CardDescription>
+                <CardDescription className="text-xs">Latest customer purchases</CardDescription>
               </div>
               <Link to="/transactions" className="text-xs font-semibold text-[#285943] hover:underline flex items-center gap-0.5">
                 <span>View all</span>

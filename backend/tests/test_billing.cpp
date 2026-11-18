@@ -7,6 +7,7 @@
 #include "models/Discount.hpp"
 #include "utils/Repository.hpp"
 #include "utils/ApiResponse.hpp"
+#include "utils/Exceptions.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -54,18 +55,42 @@ void testInvalidQuantityRejection() {
     bool caughtZero = false;
     try {
         bill.addItem(p, 0);
-    } catch (const std::invalid_argument&) {
+    } catch (const InvalidQuantityException& e) {
         caughtZero = true;
+        TEST_ASSERT(std::string(e.what()).find("must be positive") != std::string::npos);
     }
     TEST_ASSERT(caughtZero);
 
     bool caughtNegative = false;
     try {
         bill.addItem(p, -5);
-    } catch (const std::invalid_argument&) {
+    } catch (const InvalidQuantityException& e) {
         caughtNegative = true;
+        TEST_ASSERT(std::string(e.what()).find("must be positive") != std::string::npos);
     }
     TEST_ASSERT(caughtNegative);
+
+    // Excess quantity in addItem throws InsufficientStockException
+    bool caughtExcess = false;
+    try {
+        bill.addItem(p, 50);
+    } catch (const InsufficientStockException& e) {
+        caughtExcess = true;
+        TEST_ASSERT(e.getRequested() == 50);
+        TEST_ASSERT(e.getAvailable() == 20);
+    }
+    TEST_ASSERT(caughtExcess);
+
+    // Negative unit discount in BillItem throws InvalidDiscountException
+    bool caughtNegativeDiscount = false;
+    try {
+        BillItem invalidItem(10, "Bad Discount Item", 5000, -200, 2);
+        (void)invalidItem;
+    } catch (const InvalidDiscountException& e) {
+        caughtNegativeDiscount = true;
+        TEST_ASSERT(std::string(e.what()).find("cannot be negative") != std::string::npos);
+    }
+    TEST_ASSERT(caughtNegativeDiscount);
 
     std::cout << "  -> PASSED\n";
 }

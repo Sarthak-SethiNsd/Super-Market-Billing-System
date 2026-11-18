@@ -13,6 +13,7 @@ export interface CheckoutRequest {
   customerId?: number | null;
   customerName?: string | null;
   customerPhone?: string | null;
+  sessionId?: string;
 }
 
 export interface BillSummary {
@@ -30,13 +31,26 @@ export const billService = {
   async checkout(
     items: CheckoutItemRequest[],
     billNumber?: string,
-    customerDetails?: { customerId?: number | null; customerName?: string | null; customerPhone?: string | null }
+    customerDetails?: { customerId?: number | null; customerName?: string | null; customerPhone?: string | null; sessionId?: string }
   ): Promise<Invoice> {
+    if (!items || items.length === 0) {
+      throw new Error('Bill must contain at least one line item');
+    }
+    for (const item of items) {
+      if (!item.productId || item.productId <= 0) {
+        throw new Error('Invalid product ID');
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        throw new Error('Invalid quantity: must be positive');
+      }
+    }
+
     const payload: CheckoutRequest = { items };
     if (billNumber) payload.billNumber = billNumber;
     if (customerDetails?.customerId) payload.customerId = customerDetails.customerId;
     if (customerDetails?.customerName) payload.customerName = customerDetails.customerName;
     if (customerDetails?.customerPhone) payload.customerPhone = customerDetails.customerPhone;
+    if (customerDetails?.sessionId) payload.sessionId = customerDetails.sessionId;
 
     const res = await apiClient.post<ApiResponse<Invoice>>('/api/bills', payload);
     return res.data.data;

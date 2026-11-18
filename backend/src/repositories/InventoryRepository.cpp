@@ -1,6 +1,7 @@
 #include "repositories/InventoryRepository.hpp"
 #include "database/DatabaseConnection.hpp"
 #include "database/PreparedStatement.hpp"
+#include "utils/Exceptions.hpp"
 
 int InventoryRepository::recordMovement(int productId,
                                         MovementType type,
@@ -9,6 +10,13 @@ int InventoryRepository::recordMovement(int productId,
                                         int newStock,
                                         const std::string& reason,
                                         std::optional<int> relatedBillId) {
+    if (productId <= 0) {
+        throw std::invalid_argument("Product ID must be positive");
+    }
+    if (previousStock < 0 || newStock < 0) {
+        throw InvalidQuantityException("Stock levels cannot be negative");
+    }
+
     PreparedStatement stmt(db, R"(
         INSERT INTO inventory_movements (product_id, movement_type, quantity_change,
                                         previous_stock, new_stock, reason, related_bill_id)
