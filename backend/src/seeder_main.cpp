@@ -126,16 +126,16 @@ int main(int argc, char* argv[]) {
         DatabaseMigrator::migrate(db);
         DemoDataSeeder::seedIfEmpty(db);
 
-        // Ensure default administrative user exists
+        // Ensure default staff user exists
         UserRepository userRepo(db);
         bool adminCreated = false;
         if (!userRepo.adminExists()) {
             AuthService auth(db, 3600);
-            auth.createOrUpdateAdmin("admin123");
+            auth.createOrUpdateStaff("Staff@123");
             adminCreated = true;
-            std::cout << "[AUTH] Initial admin user ('admin' / 'admin123') provisioned.\n";
+            std::cout << "[AUTH] Initial staff user provisioned.\n";
         } else {
-            std::cout << "[AUTH] Existing admin account detected. Preserved untouched.\n";
+            std::cout << "[AUTH] Existing staff account detected. Preserved untouched.\n";
         }
 
         BrandRepository brandRepo(db);
@@ -232,7 +232,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Brands:     " << brandsInserted << " inserted, " << brandsSkipped << " already existing (skipped)\n";
         std::cout << "Products:   " << productsInserted << " inserted, " << productsSkipped << " already existing (skipped)\n";
         std::cout << "Stock Units:" << totalUnitsSeeded << " units recorded in inventory movements\n";
-        std::cout << "Admin User: " << (adminCreated ? "Created (admin123)" : "Existing preserved") << "\n";
+        std::cout << "Staff User: " << (adminCreated ? "Created" : "Existing preserved") << "\n";
         std::cout << "Status:     TRANSACTION COMMITTED SUCCESSFULLY\n";
         std::cout << "=================================================\n";
 

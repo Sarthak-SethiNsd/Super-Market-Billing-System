@@ -70,12 +70,12 @@ bool DemoDataSeeder::seedIfEmpty(DatabaseConnection& db) {
 
     std::cout << "[DEMO SEEDER] Initializing 15 realistic demonstration sales & synthetic customers...\n";
 
-    // 2. Ensure admin account exists
+    // 2. Ensure staff account exists
     UserRepository userRepo(db);
     if (!userRepo.adminExists()) {
         AuthService auth(db, 3600);
-        auth.createOrUpdateAdmin("admin123");
-        std::cout << "[DEMO SEEDER] Created master admin account (admin / admin123)\n";
+        auth.createOrUpdateStaff("Staff@123");
+        std::cout << "[DEMO SEEDER] Created staff account\n";
     }
 
     BrandRepository brandRepo(db);

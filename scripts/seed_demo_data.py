@@ -398,19 +398,19 @@ def seed_database(db_path: str):
         # Atomic Transaction
         cur.execute("BEGIN TRANSACTION;")
 
-        # 1. Admin User check
-        cur.execute("SELECT id FROM users WHERE username = 'admin';")
+        # 1. Staff User check
+        cur.execute("SELECT id FROM users WHERE username = 'admin' OR role = 'STAFF';")
         if not cur.fetchone():
             salt_hex = secrets.token_hex(16)
-            pwd_hash = hash_password_pbkdf2("admin123", salt_hex, 100000)
+            pwd_hash = hash_password_pbkdf2("Staff@123", salt_hex, 100000)
             cur.execute("""
                 INSERT INTO users (username, password_hash, salt, iterations, role)
-                VALUES ('admin', ?, ?, 100000, 'ADMIN');
+                VALUES ('admin', ?, ?, 100000, 'STAFF');
             """, (pwd_hash, salt_hex))
             admin_created = True
-            print("[AUTH] Default admin credentials created: 'admin' / 'admin123'")
+            print("[AUTH] Default staff account provisioned.")
         else:
-            print("[AUTH] Existing admin account detected. Preserved untouched.")
+            print("[AUTH] Existing staff account detected. Preserved untouched.")
 
         # 2. Seed Categories
         for p in DEMO_PRODUCTS:
@@ -481,7 +481,7 @@ def seed_database(db_path: str):
         print(f"Brands:     {brands_inserted} inserted, {brands_skipped} already existing (skipped)")
         print(f"Products:   {products_inserted} inserted, {products_skipped} already existing (skipped)")
         print(f"Stock Units: {stock_units_seeded} total units recorded in inventory movements")
-        print(f"Admin User: {'Created (admin123)' if admin_created else 'Existing preserved'}")
+        print(f"Staff User: {'Created' if admin_created else 'Existing preserved'}")
         print("Status:     TRANSACTION COMMITTED SUCCESSFULLY")
         print("=================================================")
 
