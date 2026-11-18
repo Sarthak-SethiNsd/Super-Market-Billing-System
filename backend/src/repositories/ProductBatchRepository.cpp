@@ -75,6 +75,19 @@ std::string ProductBatchRepository::getNearestExpiryDate(int productId) {
         return stmt2.getString(0);
     }
 
+    // 3. Fallback to any remaining batch regardless of quantity
+    PreparedStatement stmt3(db, R"(
+        SELECT expiry_date
+        FROM product_batches
+        WHERE product_id = ?
+        ORDER BY expiry_date ASC
+        LIMIT 1;
+    )");
+    stmt3.bind(1, productId);
+    if (stmt3.step() && !stmt3.isNull(0)) {
+        return stmt3.getString(0);
+    }
+
     return "";
 }
 

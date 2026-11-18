@@ -77,10 +77,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const savedCatId = productToEdit.categoryId || 0;
       const savedBrandId = productToEdit.brandId || 0;
       setCategoryId(savedCatId);
-      setProductType(productToEdit.productType || 'NON_PERISHABLE');
+
+      const rawType = String(productToEdit.productType || 'NON_PERISHABLE').toUpperCase();
+      const normType: ProductType = (rawType.includes('PERISHABLE') && !rawType.includes('NON'))
+        ? 'PERISHABLE'
+        : 'NON_PERISHABLE';
+      setProductType(normType);
+
       setPriceInRupees(productToEdit.priceInRupees !== undefined ? productToEdit.priceInRupees : 100);
       setStock(productToEdit.stock !== undefined ? productToEdit.stock : 10);
-      setExpiryDate(productToEdit.expiryDate || '');
+
+      // Clean YYYY-MM-DD date representation for HTML5 date picker
+      const rawExp = productToEdit.expiryDate || (productToEdit as any).nearestExpiryDate || '';
+      const formattedExp = rawExp.length >= 10 ? rawExp.substring(0, 10) : rawExp;
+      setExpiryDate(formattedExp);
+
       setDiscountType(productToEdit.discount?.type || 'NONE');
       setDiscountValue(productToEdit.discount?.value !== undefined ? productToEdit.discount.value : 0);
 
@@ -132,13 +143,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
-    // STRICT THREE-DIGIT PRODUCT CODE VALIDATION (PART E)
+    // PRODUCT CODE / BARCODE VALIDATION
     // Legacy preservation: If editing and SKU is unchanged, allow legacy format (e.g. SKU-GRAIN-001)
     const isUnchangedLegacySku = isEditing && productToEdit && trimmedSku === productToEdit.sku;
     if (!isUnchangedLegacySku) {
-      const threeDigitRegex = /^\d{3}$/;
-      if (!threeDigitRegex.test(trimmedSku)) {
-        setError('Product code must contain exactly three numeric digits (e.g. 001, 025, 999). Letters, spaces, and other formats are not allowed.');
+      const barcodeRegex = /^\d{3,64}$/;
+      if (!barcodeRegex.test(trimmedSku)) {
+        setError('Product code / barcode must contain only numeric digits (minimum 3 digits, e.g. 001, 123456). Letters, spaces, and other symbols are not allowed.');
         return;
       }
     }
@@ -198,7 +209,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       productType,
       priceInRupees: numPrice,
       stock: numStock,
-      expiryDate: productType === 'PERISHABLE' ? expiryDate : '',
+      expiryDate: productType === 'PERISHABLE' ? (expiryDate ? expiryDate.substring(0, 10) : '') : '',
       discountType,
       discountValue: numDiscVal,
     };

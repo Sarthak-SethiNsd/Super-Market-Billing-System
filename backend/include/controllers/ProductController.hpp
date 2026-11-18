@@ -237,6 +237,21 @@ public:
             });
         }
 
+        if (nearestExp.empty()) {
+            for (const auto& b : batches) {
+                if (!b.isExpired() && (nearestExp.empty() || b.getExpiryDate() < nearestExp)) {
+                    nearestExp = b.getExpiryDate();
+                }
+            }
+        }
+        if (nearestExp.empty() && !batches.empty()) {
+            for (const auto& b : batches) {
+                if (nearestExp.empty() || b.getExpiryDate() < nearestExp) {
+                    nearestExp = b.getExpiryDate();
+                }
+            }
+        }
+
         std::string effectiveExpiry = !nearestExp.empty() ? nearestExp : expiry;
 
         // Fetch price & discount history (Daily Editing Audit Trail)
@@ -535,12 +550,13 @@ public:
                             invRepo.recordMovement(newId, MovementType::ADDITION, stock, 0, stock, "Initial product stock");
                         }
 
-                        if (!expiryDate.empty() && stock > 0) {
+                        if (!expiryDate.empty()) {
                             ProductBatchRepository batchRepo(db);
                             std::string bNum = (body.contains("batchNumber") && body["batchNumber"].is_string())
                                 ? body["batchNumber"].get<std::string>()
                                 : ("BATCH-" + std::to_string(newId) + "-" + expiryDate);
                             batchRepo.addBatch(newId, bNum, stock, expiryDate);
+                            batchRepo.updateProductNearestExpiry(newId);
                         }
 
                         tx.commit();
@@ -772,16 +788,66 @@ public:
                         }
 
                         if (productTypeUpper == "PERISHABLE") {
+                            // Retain existing expiry date if not provided in the request body
+                            if (expiryDate.empty() && p->getType() == ProductType::PERISHABLE) {
+                                const auto* oldPer = dynamic_cast<const Perishable*>(p.get());
+                                if (oldPer) expiryDate = oldPer->getExpiry();
+                            }
+
                             Perishable updated(id, sku, name, brandId, categoryId, priceInPaise, stock, expiryDate, strategy);
                             repo.update(updated);
 
                             if (!expiryDate.empty()) {
                                 ProductBatchRepository batchRepo(db);
+
+                                // Check how many batches exist for this product
+                                PreparedStatement countStmt(db, "SELECT COUNT(*) FROM product_batches WHERE product_id = ?;");
+                                countStmt.bind(1, id);
+                                int bCount = 0;
+                                if (countStmt.step()) bCount = countStmt.getInt(0);
+
+                                if (bCount == 0) {
+                                    // Create initial batch with the edited expiry date
+                                    batchRepo.addBatch(id, "BATCH-" + std::to_string(id) + "-" + expiryDate, stock, expiryDate);
+                                } else if (bCount == 1) {
+                                    // Exactly one batch exists: update its expiry date and synchronize quantity directly
+                                    PreparedStatement updateBatchStmt(db, "UPDATE product_batches SET expiry_date = ?, quantity = ? WHERE product_id = ?;");
+                                    updateBatchStmt.bind(1, expiryDate);
+                                    updateBatchStmt.bind(2, stock);
+                                    updateBatchStmt.bind(3, id);
+                                    updateBatchStmt.execute();
+                                } else {
+                                    // Multiple batches exist: update the nearest/active batch date to the new expiry date
+                                    PreparedStatement updateBatchStmt(db, R"(
+                                        UPDATE product_batches
+                                        SET expiry_date = ?
+                                        WHERE id = (
+                                            SELECT id FROM product_batches
+                                            WHERE product_id = ?
+                                            ORDER BY expiry_date ASC, id ASC
+                                            LIMIT 1
+                                        );
+                                    )");
+                                    updateBatchStmt.bind(1, expiryDate);
+                                    updateBatchStmt.bind(2, id);
+                                    updateBatchStmt.execute();
+                                }
+
+                                // Update product's nearest expiry date
                                 batchRepo.updateProductNearestExpiry(id);
                             }
                         } else {
                             NonPerishable updated(id, sku, name, brandId, categoryId, priceInPaise, stock, strategy);
                             repo.update(updated);
+
+                            // When converted to non-perishable, clear batch records and reset expiry_date
+                            PreparedStatement clearBatches(db, "DELETE FROM product_batches WHERE product_id = ?;");
+                            clearBatches.bind(1, id);
+                            clearBatches.execute();
+
+                            PreparedStatement clearExp(db, "UPDATE products SET expiry_date = '' WHERE id = ?;");
+                            clearExp.bind(1, id);
+                            clearExp.execute();
                         }
 
                         tx.commit();
